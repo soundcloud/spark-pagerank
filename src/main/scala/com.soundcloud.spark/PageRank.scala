@@ -11,15 +11,9 @@ object PageRank {
   type PageRankGraph = Graph[VertexValue, EdgeWeight]
   type VectorRDD = VertexRDD[VertexValue]
 
-  case class VertexMetadata(value: VertexValue, hasOutgoingEdges: Boolean, oldValue: VertexValue = 0.0) {
+  case class VertexMetadata(value: VertexValue, isDangling: Boolean) {
     def withValue(newValue: VertexValue): VertexMetadata =
-      VertexMetadata(newValue, hasOutgoingEdges, oldValue)
-
-    def swapValue(newValue: VertexValue): VertexMetadata =
-      VertexMetadata(newValue, hasOutgoingEdges, value)
-
-    def resetValue(newValue: VertexValue): VertexMetadata =
-      VertexMetadata(newValue, hasOutgoingEdges)
+      VertexMetadata(newValue, isDangling)
   }
   type WorkingPageRankGraph = Graph[VertexMetadata, EdgeWeight]
 
@@ -80,6 +74,9 @@ object PageRank {
     var hasConverged = false
     var numIterations = 0
     while (!hasConverged && numIterations < maxIterations) {
+      def calculateDanglingUpdate(startingValue: VertexValue): VertexValue =
+        (1 - teleportProb) * (1.0 / (n.value - 1.0)) * startingValue
+
       /**
        * Closure that updates the PageRank value of a node based on the incoming
        * sum. If the vertex does not have outgoing links (is a "dangling" node),
@@ -92,12 +89,10 @@ object PageRank {
       def updateVertex(vId: VertexId, vMeta: VertexMetadata, incomingSum: Option[VertexValue]): VertexMetadata = {
         var newPageRank = (1 - teleportProb) * incomingSum.getOrElse(0.0) + teleportProb / n.value
 
-        if (!vMeta.hasOutgoingEdges) {
-          newPageRank -= (1 - teleportProb) * (1.0 / (n.value - 1.0)) * vMeta.value
-          vMeta.swapValue(newPageRank)
-        } else {
-          vMeta.withValue(newPageRank)
-        }
+        if (vMeta.isDangling)
+          newPageRank -= calculateDanglingUpdate(vMeta.value)
+
+        vMeta.withValue(newPageRank)
       }
 
       // save previous graph before computing next iteration
@@ -109,15 +104,17 @@ object PageRank {
         _ + _
       )
 
+      // collect what will be the dangling mass after the update
+      val danglingMass = collectDanglingMass(graph)
+
       // update vertices with message sums
       val intermediateGraph = graph.outerJoinVertices(messages)(updateVertex)
-      val danglingMass = intermediateGraph.vertices.map(_._2.oldValue).sum()
 
       // distribute missing mass from dangling nodes equally
       // (not having self-references is accounted for in `updateVertex`)
-      val missingMassOnEachVertex = (1 - teleportProb) * (1.0 / (n.value - 1.0)) * danglingMass
+      val perVertexMissingMass = calculateDanglingUpdate(danglingMass)
       graph = intermediateGraph.mapVertices { case (_, vMeta) =>
-        vMeta.resetValue(vMeta.value + missingMassOnEachVertex)
+        vMeta.withValue(vMeta.value + perVertexMissingMass)
       }
       //graph = graph.persist(StorageLevel.MEMORY_ONLY)
 
@@ -132,6 +129,18 @@ object PageRank {
     graph.
       vertices.
       mapValues(_.value)
+  }
+
+  /**
+   * Collects the current PageRank values for all dangling nodes. This is used
+   * to redistrubte "dangling mass" after an iteration.
+   */
+  private[spark] def collectDanglingMass(graph: WorkingPageRankGraph): Double = {
+    graph.
+      vertices.
+      filter(_._2.isDangling).
+      map(_._2.value).
+      sum()
   }
 
   /**
@@ -166,11 +175,11 @@ object PageRank {
    */
   private[spark] def buildWorkingPageRankGraph(graph: PageRankGraph): WorkingPageRankGraph = {
     graph.outerJoinVertices(graph.outDegrees) { (_, value, outDegrees) =>
-      val hasOutgoingEdges = outDegrees match {
-        case None => false
-        case Some(x) => x != 0
+      val isDangling = outDegrees match {
+        case None => true
+        case Some(x) => x == 0
       }
-      VertexMetadata(value, hasOutgoingEdges)
+      VertexMetadata(value, isDangling)
     }
   }
 }
