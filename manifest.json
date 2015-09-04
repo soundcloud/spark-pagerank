@@ -1,0 +1,9 @@
+{
+    "name": "spark-pagerank",
+    "description": "A Spark implementation of PageRank",
+    "contact_email": "josh@soundcloud.com",
+    "owner": "josh",
+    "status": "development",
+    "data_sensitivity": ["no_user_data"],
+    "dependencies": []
+}

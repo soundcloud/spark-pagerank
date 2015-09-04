@@ -2,8 +2,8 @@
 all: build
 
 .PHONY: build
-build:
-	./sbt test package
+build: test
+	./sbt package
 
 .PHONY: test
 test:
@@ -16,4 +16,3 @@ clean:
 .PHONY: distclean
 distclean:
 	rm -rf project/target project/build
-	rm -rf .deps
