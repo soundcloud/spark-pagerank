@@ -1,6 +1,5 @@
 package com.soundcloud.spark
 
-import org.apache.spark.SparkContext
 import org.apache.spark.graphx._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
@@ -23,7 +22,7 @@ object PageRank {
   val EPS: Double = 1.0E-15 // machine epsilon: http://en.wikipedia.org/wiki/Machine_epsilon
 
   /**
-   * Runs PageRank using the GraphX Pregel API.
+   * Runs PageRank using the GraphX API.
    *
    * Requirements of the input graph (enforced):
    *  - Has no self-referencing nodes (i.e. edges where in and out nodes are the
@@ -48,10 +47,9 @@ object PageRank {
     maxIterations: Int = DefaultMaxIterations,
     convergenceThreshold: Option[Double] = DefaultConvergenceThreshold): VectorRDD = {
 
-    // TODO: convert these to counts (where possible) so error debugging is easier
     require(numSelfReferences(inputGraph.triplets) == 0, "Number of vertices with self-referencing edges must be 0")
-    require(isVectorNormalized(inputGraph.vertices))
     require(numNonNormalizedEdges(inputGraph) == 0, "Number of non-normalized edges must be 0")
+    require(isVectorNormalized(inputGraph.vertices))
 
     require(teleportProb >= 0.0, "Teleport probability must be greater than or equal to 0.0")
     require(teleportProb < 1.0, "Teleport probability must be less than 1.0")
@@ -165,9 +163,6 @@ object PageRank {
   private[spark] def numSelfReferences(edges: RDD[EdgeTriplet[EdgeWeight, EdgeWeight]]): Long =
     edges.filter(e => e.srcId == e.dstId).map(_.srcId).distinct().count()
 
-  private[spark] def isVectorNormalized(vector: VectorRDD): Boolean =
-    math.abs(1.0 - vector.map(_._2).sum) <= EPS
-
   private[spark] def numNonNormalizedEdges(graph: PageRankGraph): Long = {
     graph.
       collectEdges(EdgeDirection.Out).      // results in a `VertexRDD[Array[Edge[ED]]]`
@@ -175,6 +170,9 @@ object PageRank {
       filter(x => math.abs(1.0 - x) > EPS). // filter and keep those that are not normalized across out edges
       count()
   }
+
+  private[spark] def isVectorNormalized(vector: VectorRDD): Boolean =
+    math.abs(1.0 - vector.map(_._2).sum) <= EPS
 
   /**
    * Attach flag for "has outgoing edges" to produce initial graph.
