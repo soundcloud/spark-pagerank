@@ -32,9 +32,6 @@ object PageRank {
    *  - Edge weights are already normalized (i.e. all outgoing edges sum to
    *    `1.0`)
    *
-   * This is a partially-distributed computation in that only the graph is
-   * distributed.
-   *
    * @param inputGraph the graph to operate on, with vector metadata as the
    *          starting PageRank score, edge weights (as `Double`)
    * @param teleportProb probability of a random jump in the graph
@@ -52,9 +49,9 @@ object PageRank {
     convergenceThreshold: Option[Double] = DefaultConvergenceThreshold): VectorRDD = {
 
     // TODO: convert these to counts (where possible) so error debugging is easier
-    require(hasNoSelfReferences(inputGraph.triplets))
+    require(numSelfReferences(inputGraph.triplets) == 0, "Number of vertices with self-referencing edges must be 0")
     require(isVectorNormalized(inputGraph.vertices))
-    require(areEdgeWeightsNormalized(inputGraph))
+    require(numNonNormalizedEdges(inputGraph) == 0, "Number of non-normalized edges must be 0")
 
     require(teleportProb >= 0.0, "Teleport probability must be greater than or equal to 0.0")
     require(teleportProb < 1.0, "Teleport probability must be less than 1.0")
@@ -70,33 +67,44 @@ object PageRank {
     val sc = graph.vertices.context
     val n = sc.broadcast(inputGraph.numVertices)
 
-    // iterate until convergence
-    var hasConverged = false
-    var numIterations = 0
-    while (!hasConverged && numIterations < maxIterations) {
-      def calculateDanglingUpdate(startingValue: VertexValue): VertexValue =
-        (1 - teleportProb) * (1.0 / (n.value - 1.0)) * startingValue
+    /**
+     * A single PageRank iteration.
+     */
+    def iterate(graph: WorkingPageRankGraph): WorkingPageRankGraph = {
+      /**
+       * Calculates the new PageRank value of a vertex given the incoming
+       * probability mass plus the teleport probability.
+       */
+      def calculateVertexUpdate(incomingSum: VertexValue): VertexValue =
+        ((1 - teleportProb) * incomingSum) + (teleportProb / n.value)
+
+      /**
+       * Calculates the dangling node delta update, after the normal vertex
+       * update. Note the `n - 1` is to account for no self-references in this
+       * node we are updating.
+       */
+      def calculateDanglingVertexUpdate(startingValue: VertexValue): VertexValue =
+        (1 - teleportProb) * (1.0 / (n.value - 1)) * startingValue
 
       /**
        * Closure that updates the PageRank value of a node based on the incoming
-       * sum. If the vertex does not have outgoing links (is a "dangling" node),
-       * it does not distribute all its PageRank mass (only through the
-       * teleport). Hence, update the dangling mass counter. Finally, since we
-       * do not want self-references, subtract the old PageRank mass from the
-       * new one because we will distribute the missing mass equally among all
-       * nodes.
+       * sum/probability mass.
+       *
+       * If the vertex is a "dangling" (no out edges):
+       *  - It does not distribute all its PageRank mass on out edges,
+       *    only through the teleport
+       *  - Since we do not want self-references, subtract the old PageRank mass
+       *    from the new one because we will distribute the missing mass equally
+       *    among all nodes.
        */
-      def updateVertex(vId: VertexId, vMeta: VertexMetadata, incomingSum: Option[VertexValue]): VertexMetadata = {
-        var newPageRank = (1 - teleportProb) * incomingSum.getOrElse(0.0) + teleportProb / n.value
+      def updateVertex(vId: VertexId, vMeta: VertexMetadata, incomingSumOpt: Option[VertexValue]): VertexMetadata = {
+        val incomingSum = incomingSumOpt.getOrElse(0.0)
 
         if (vMeta.isDangling)
-          newPageRank -= calculateDanglingUpdate(vMeta.value)
-
-        vMeta.withValue(newPageRank)
+          vMeta.withValue(calculateVertexUpdate(incomingSum) - calculateDanglingVertexUpdate(vMeta.value))
+        else
+          vMeta.withValue(calculateVertexUpdate(incomingSum))
       }
-
-      // save previous graph before computing next iteration
-      val previousGraph = graph
 
       // compute vertex update messages over all edges
       val messages = graph.aggregateMessages[VertexValue](
@@ -104,19 +112,39 @@ object PageRank {
         _ + _
       )
 
-      // collect what will be the dangling mass after the update
-      val danglingMass = collectDanglingMass(graph)
+      // collect what *will be* the dangling mass after the update that follows
+      val danglingMass =
+        graph.
+          vertices.
+          filter(_._2.isDangling).
+          map(_._2.value).
+          sum()
 
       // update vertices with message sums
       val intermediateGraph = graph.outerJoinVertices(messages)(updateVertex)
 
-      // distribute missing mass from dangling nodes equally
-      // (not having self-references is accounted for in `updateVertex`)
-      val perVertexMissingMass = calculateDanglingUpdate(danglingMass)
-      graph = intermediateGraph.mapVertices { case (_, vMeta) =>
+      // distribute missing mass from dangling nodes equally to all other nodes
+      val perVertexMissingMass = calculateDanglingVertexUpdate(danglingMass)
+      val newGraph = intermediateGraph.mapVertices { case (_, vMeta) =>
         vMeta.withValue(vMeta.value + perVertexMissingMass)
       }
-      //graph = graph.persist(StorageLevel.MEMORY_ONLY)
+
+      // TODO: when to persist and unpersist the graph?
+      //newGraph = newGraph.persist(StorageLevel.MEMORY_ONLY)
+
+      newGraph
+    }
+
+    // iterate until convergence
+    var hasConverged = false
+    var numIterations = 0
+    while (!hasConverged && numIterations < maxIterations) {
+
+      // save the graph before the iteration starts in order to check for convergence after the iteration
+      val previousGraph = graph
+
+      // perform a single PageRank iteration
+      graph = iterate(graph)
 
       // check for convergence (if threshold was provided)
       convergenceThreshold.map { t =>
@@ -132,42 +160,20 @@ object PageRank {
   }
 
   /**
-   * Collects the current PageRank values for all dangling nodes. This is used
-   * to redistrubte "dangling mass" after an iteration.
+   * Counts the number of vertices that have self-referencing edges.
    */
-  private[spark] def collectDanglingMass(graph: WorkingPageRankGraph): Double = {
-    graph.
-      vertices.
-      filter(_._2.isDangling).
-      map(_._2.value).
-      sum()
-  }
-
-  /**
-   * Calculates the per-component change/delta and sums over all components
-   * (norm) to determine the total change/delta between the two vectors.
-   */
-  private[spark] def delta(left: VertexRDD[VertexMetadata], right: VertexRDD[VertexMetadata]): VertexValue = {
-    left.
-      join(right).
-      map { case (_, (l, r)) =>
-        math.abs(l.value - r.value)
-      }.
-      sum
-  }
-
-  private[spark] def hasNoSelfReferences(edges: RDD[EdgeTriplet[EdgeWeight, EdgeWeight]]): Boolean =
-    edges.filter(e => e.srcId == e.dstId).isEmpty
+  private[spark] def numSelfReferences(edges: RDD[EdgeTriplet[EdgeWeight, EdgeWeight]]): Long =
+    edges.filter(e => e.srcId == e.dstId).map(_.srcId).distinct().count()
 
   private[spark] def isVectorNormalized(vector: VectorRDD): Boolean =
     math.abs(1.0 - vector.map(_._2).sum) <= EPS
 
-  private[spark] def areEdgeWeightsNormalized(graph: PageRankGraph): Boolean = {
+  private[spark] def numNonNormalizedEdges(graph: PageRankGraph): Long = {
     graph.
       collectEdges(EdgeDirection.Out).      // results in a `VertexRDD[Array[Edge[ED]]]`
       map(_._2.map(_.attr).sum).            // count the out edge weights
       filter(x => math.abs(1.0 - x) > EPS). // filter and keep those that are not normalized across out edges
-      isEmpty
+      count()
   }
 
   /**
@@ -181,5 +187,18 @@ object PageRank {
       }
       VertexMetadata(value, isDangling)
     }
+  }
+
+  /**
+   * Calculates the per-component change/delta and sums over all components
+   * (norm) to determine the total change/delta between the two vectors.
+   */
+  private[spark] def delta(left: VertexRDD[VertexMetadata], right: VertexRDD[VertexMetadata]): VertexValue = {
+    left.
+      join(right).
+      map { case (_, (l, r)) =>
+        math.abs(l.value - r.value)
+      }.
+      sum()
   }
 }
