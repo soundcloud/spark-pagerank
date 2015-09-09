@@ -1,0 +1,21 @@
+{
+  "stages": [
+    {
+      "name": "init",
+      "jobs": [
+        {
+          "test": {
+            "cmd": "crun jdk-8-dev 'make test'"
+          }
+        }
+      ]
+    }
+  ],
+  "settings": {
+    "jenkins-server": "http://jenkins.classification.dev.s-cloud.net",
+    "git-url": "git@github.com:soundcloud/spark-pagerank.git",
+    "git-branch": "master",
+    "default-name": "spark-pagerank",
+    "slave-label": "docker"
+  }
+}
