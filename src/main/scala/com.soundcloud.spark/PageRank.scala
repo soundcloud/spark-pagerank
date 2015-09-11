@@ -165,9 +165,11 @@ object PageRank {
 
   private[spark] def numNonNormalizedEdges(graph: PageRankGraph): Long = {
     graph.
-      collectEdges(EdgeDirection.Out).      // results in a `VertexRDD[Array[Edge[ED]]]`
-      map(_._2.map(_.attr).sum).            // count the out edge weights
-      filter(x => math.abs(1.0 - x) > EPS). // filter and keep those that are not normalized across out edges
+      aggregateMessages[Double](
+        ctx => ctx.sendToSrc(ctx.attr),
+        _ + _
+      ).
+      filter(1.0 - _._2 > EPS).
       count()
   }
 
