@@ -4,6 +4,7 @@ import scala.reflect.ClassTag
 
 import org.apache.spark.SparkContext
 import org.apache.spark.graphx.{ Edge, Graph }
+import org.apache.spark.rdd.RDD
 
 /**
  * Functions of building graphs or parts of graphs from more basic components,

@@ -121,7 +121,8 @@ class PageRankTest
     val n = (nodes._1 ++ nodes._2).distinct.size
     val prior = 1.0 / n
 
-    val graph = normalizeOutEdgeWeights(graphFromEdges(input, prior))
+    val edges = normalizeOutEdgeWeightsRDD(sc.parallelize(expandEdgeTuples(input)))
+    val graph = Graph.fromEdges(edges, prior)
     val actual = PageRank.run(graph, teleportProb, maxIterations, convergenceThreshold).collect()
 
     // error between each component, expected vs actual
@@ -132,7 +133,7 @@ class PageRankTest
       }.sum
     }
 
-    actual.map(_._2).sum shouldBe 1.0 +- PageRank.EPS
+    actual.map(_._2).sum shouldBe 1.0 +- EPS
     squaredError(actual, expected) shouldBe 0.0 +- math.pow(10, -5)
   }
 }

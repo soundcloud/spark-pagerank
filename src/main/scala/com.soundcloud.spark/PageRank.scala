@@ -4,7 +4,8 @@ import org.apache.spark.graphx._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
 
-object PageRank {
+object PageRank extends GraphUtils {
+
   type VertexValue = Double
   type EdgeWeight = Double
   type PageRankGraph = Graph[VertexValue, EdgeWeight]
@@ -19,12 +20,24 @@ object PageRank {
   val DefaultTeleportProb: Double = 0.15
   val DefaultMaxIterations: Int = 100
   val DefaultConvergenceThreshold: Option[Double] = None
-  val EPS: Double = 1.0E-15 // machine epsilon: http://en.wikipedia.org/wiki/Machine_epsilon
+
+  /**
+   * Validates the structure of the input PageRank graph. See: {{#run}}.
+   */
+  def validateGraphStructure(graph: PageRankGraph) {
+    val numSelfReferences = countSelfReferences(graph.edges)
+    val verticesAreNormalized = areVerticesNormalized(graph.vertices)
+    val numVerticesWithoutNormalizedOutEdges = countVerticesWithoutNormalizedOutEdges(graph.edges)
+
+    require(numSelfReferences == 0, "Number of vertices with self-referencing edges must be 0")
+    require(verticesAreNormalized, "Input vertices values must be normalized")
+    require(numVerticesWithoutNormalizedOutEdges == 0, "Number of vertices without normalized out edges must be 0")
+  }
 
   /**
    * Runs PageRank using the GraphX API.
    *
-   * Requirements of the input graph (enforced):
+   * Requirements of the input graph (not-enforced at runtime, see {{#validateGraphStructure}}):
    *  - Has no self-referencing nodes (i.e. edges where in and out nodes are the
    *    same)
    *  - Vertex values are normalized (i.e. prior vector is normalized)
@@ -47,10 +60,6 @@ object PageRank {
     maxIterations: Int = DefaultMaxIterations,
     convergenceThreshold: Option[Double] = DefaultConvergenceThreshold): VectorRDD = {
 
-    require(numSelfReferences(inputGraph.triplets) == 0, "Number of vertices with self-referencing edges must be 0")
-    require(numNonNormalizedEdges(inputGraph) == 0, "Number of non-normalized edges must be 0")
-    require(isVectorNormalized(inputGraph.vertices))
-
     require(teleportProb >= 0.0, "Teleport probability must be greater than or equal to 0.0")
     require(teleportProb < 1.0, "Teleport probability must be less than 1.0")
     require(maxIterations > 0, "Max iterations must be greater than 0")
@@ -60,10 +69,8 @@ object PageRank {
       require(t < 1.0, "Convergence threshold must less than 1.0")
     }
 
+    val numVertices = inputGraph.numVertices // lazily calculated, but constant over all iterations
     var graph = buildWorkingPageRankGraph(inputGraph)
-
-    val sc = graph.vertices.context
-    val n = sc.broadcast(inputGraph.numVertices)
 
     /**
      * A single PageRank iteration.
@@ -73,16 +80,16 @@ object PageRank {
        * Calculates the new PageRank value of a vertex given the incoming
        * probability mass plus the teleport probability.
        */
-      def calculateVertexUpdate(incomingSum: VertexValue): VertexValue =
-        ((1 - teleportProb) * incomingSum) + (teleportProb / n.value)
+      def calculateVertexUpdate(incomingSum: VertexValue, n: Long): VertexValue =
+        ((1 - teleportProb) * incomingSum) + (teleportProb / n)
 
       /**
        * Calculates the dangling node delta update, after the normal vertex
        * update. Note the `n - 1` is to account for no self-references in this
        * node we are updating.
        */
-      def calculateDanglingVertexUpdate(startingValue: VertexValue): VertexValue =
-        (1 - teleportProb) * (1.0 / (n.value - 1)) * startingValue
+      def calculateDanglingVertexUpdate(startingValue: VertexValue, n: Long): VertexValue =
+        (1 - teleportProb) * (1.0 / (n - 1)) * startingValue
 
       /**
        * Closure that updates the PageRank value of a node based on the incoming
@@ -95,13 +102,14 @@ object PageRank {
        *    from the new one because we will distribute the missing mass equally
        *    among all nodes.
        */
-      def updateVertex(vId: VertexId, vMeta: VertexMetadata, incomingSumOpt: Option[VertexValue]): VertexMetadata = {
+      def updateVertex(numVertices: Long, perVertexMissingMass: Double)(vId: VertexId, vMeta: VertexMetadata, incomingSumOpt: Option[VertexValue]): VertexMetadata = {
         val incomingSum = incomingSumOpt.getOrElse(0.0)
+        val newValue = calculateVertexUpdate(incomingSum, numVertices) + perVertexMissingMass
 
         if (vMeta.isDangling)
-          vMeta.withValue(calculateVertexUpdate(incomingSum) - calculateDanglingVertexUpdate(vMeta.value))
+          vMeta.withValue(newValue - calculateDanglingVertexUpdate(vMeta.value, numVertices))
         else
-          vMeta.withValue(calculateVertexUpdate(incomingSum))
+          vMeta.withValue(newValue)
       }
 
       // compute vertex update messages over all edges
@@ -118,19 +126,11 @@ object PageRank {
           map(_._2.value).
           sum()
 
-      // update vertices with message sums
-      val intermediateGraph = graph.outerJoinVertices(messages)(updateVertex)
-
       // distribute missing mass from dangling nodes equally to all other nodes
-      val perVertexMissingMass = calculateDanglingVertexUpdate(danglingMass)
-      val newGraph = intermediateGraph.mapVertices { case (_, vMeta) =>
-        vMeta.withValue(vMeta.value + perVertexMissingMass)
-      }
+      val perVertexMissingMass = calculateDanglingVertexUpdate(danglingMass, numVertices)
 
-      // TODO: when to persist and unpersist the graph?
-      //newGraph = newGraph.persist(StorageLevel.MEMORY_ONLY)
-
-      newGraph
+      // to get the new graph, update vertices with message sums and the per vertex missing mass
+      graph.outerJoinVertices(messages)(updateVertex(numVertices, perVertexMissingMass))
     }
 
     // iterate until convergence
@@ -156,25 +156,6 @@ object PageRank {
       vertices.
       mapValues(_.value)
   }
-
-  /**
-   * Counts the number of vertices that have self-referencing edges.
-   */
-  private[spark] def numSelfReferences(edges: RDD[EdgeTriplet[EdgeWeight, EdgeWeight]]): Long =
-    edges.filter(e => e.srcId == e.dstId).map(_.srcId).distinct().count()
-
-  private[spark] def numNonNormalizedEdges(graph: PageRankGraph): Long = {
-    graph.
-      aggregateMessages[Double](
-        ctx => ctx.sendToSrc(ctx.attr),
-        _ + _
-      ).
-      filter(1.0 - _._2 > EPS).
-      count()
-  }
-
-  private[spark] def isVectorNormalized(vector: VectorRDD): Boolean =
-    math.abs(1.0 - vector.map(_._2).sum) <= EPS
 
   /**
    * Attach flag for "has outgoing edges" to produce initial graph.
