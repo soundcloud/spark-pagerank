@@ -1,17 +1,19 @@
+SBT=crun -i sbt -- sbt
+
 .PHONY: all
 all: build
 
 .PHONY: build
 build: test
-	./sbt package
+	$(SBT) package
 
 .PHONY: test
 test:
-	./sbt test
+	$(SBT) test
 
 .PHONY: clean
 clean:
-	./sbt clean
+	$(SBT) clean
 
 .PHONY: distclean
 distclean:
