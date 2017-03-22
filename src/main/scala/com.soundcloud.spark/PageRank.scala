@@ -4,7 +4,9 @@ import org.apache.spark.graphx._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
 
-object PageRank extends GraphUtils {
+import com.soundcloud.spark.GraphUtils._
+
+object PageRank {
 
   type VertexValue = Double
   type EdgeWeight = Double

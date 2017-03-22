@@ -3,12 +3,12 @@ package com.soundcloud.spark
 import org.apache.spark.graphx.{ Edge, Graph, VertexId }
 import org.scalatest.{ FunSuite, Matchers }
 
+import com.soundcloud.spark.GraphUtils._
 import com.soundcloud.spark.test.SparkTesting
 
 class PageRankTest
   extends FunSuite
   with Matchers
-  with GraphUtils
   with GraphTesting
   with SparkTesting {
 

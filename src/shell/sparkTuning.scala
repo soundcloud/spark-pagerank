@@ -4,16 +4,13 @@
  * This should be run by applying all of the configuration except for the
  * executor settings (as this would waste resources). E.g.:
  *
- * {{
- * crun -i hadoop-cdh5-spark -- spark-shell \
- *   --master "local" \
- *   --deploy-mode "client" \
- *   --driver-memory 1G \
- *   --num-executors 0 \
- *   --conf "spark.dynamicAllocation.enabled=false" \
- *   --conf "spark.storage.memoryFraction=0.6" \
- *   -i sparkTuning.scala
- *  }}
+crun -i hadoop-cdh5-spark-2.1.0 -- spark-shell \
+  --master "local" \
+  --deploy-mode "client" \
+  --driver-memory 1G \
+  --num-executors 0 \
+  --conf "spark.storage.memoryFraction=0.9" \
+  -i src/shell/sparkTuning.scala
  */
 
 // TODO(jd): incorporate `spark.task.cpus`

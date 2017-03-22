@@ -1,7 +1,7 @@
 package com.soundcloud.spark
 
 import org.apache.spark.SparkContext
-import org.apache.spark.graphx.{ Edge, Graph }
+import org.apache.spark.graphx.{ Edge, Graph, VertexId }
 import org.apache.spark.storage.StorageLevel
 
 /**
@@ -11,15 +11,34 @@ import org.apache.spark.storage.StorageLevel
 object PageRankApp extends App {
   val sc = new SparkContext()
 
-  val inputPath = "/user/josh/discorank/normalizedEdges"
-  val outputPath = "/user/josh/discorank/prVector"
+  val statsPath = "/user/josh/discorank/stats"
+  val edgesPath = "/user/josh/discorank/edges"
+  val vertexPath = "/user/josh/discorank/vertices"
+  val outputPath = "/user/josh/discorank/pagerank"
 
-  val edges = sc.objectFile[Edge[Double]](inputPath).coalesce(10000)
-  val numVertices = 650284017
+  val numPartitions = 4096
+  val edges = sc.objectFile[Edge[Double]](edgesPath).coalesce(numPartitions)
+  val vertices = sc.objectFile[(VertexId, Double)](vertexPath).coalesce(numPartitions)
+
+  val numVertices = sc
+    .textFile(statsPath)
+    .collect()
+    .map { x =>
+      val Array(k, v) = x.split("\t")
+      (k, v.toLong)
+    }
+    .filter(_._1 == "numVertices")
+    .head
+    ._2
   val prior = 1.0 / numVertices
-  val graph = Graph.fromEdges(
+
+  println(s"numVertices: $numVertices")
+  println(s"prior: $prior")
+
+  val graph = Graph.apply(
+    vertices,
     edges,
-    defaultValue = prior,
+    defaultVertexAttr = prior,
     vertexStorageLevel = StorageLevel.MEMORY_AND_DISK_2,
     edgeStorageLevel = StorageLevel.MEMORY_AND_DISK_2
   )

@@ -10,7 +10,7 @@ import org.apache.spark.rdd.RDD
  *
  * TODO(jd): move to `spark-lib`
  */
-trait GraphUtils {
+object GraphUtils {
 
   val EPS: Double = 1.0E-15 // machine epsilon: http://en.wikipedia.org/wiki/Machine_epsilon
 

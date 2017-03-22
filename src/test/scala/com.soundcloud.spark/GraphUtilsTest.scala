@@ -3,12 +3,12 @@ package com.soundcloud.spark
 import org.apache.spark.graphx.Graph
 import org.scalatest.{ FunSuite, Matchers }
 
+import com.soundcloud.spark.GraphUtils._
 import com.soundcloud.spark.test.SparkTesting
 
 class GraphUtilsTest
   extends FunSuite
   with Matchers
-  with GraphUtils
   with GraphTesting
   with SparkTesting {
 
