@@ -37,7 +37,7 @@ def calculate(numExecutors: Int, numCoresPerExecutor: Int, executorMemory: Doubl
   val totalUsableStorageMemory = numExecutors * usableStorageMemory
 
   val workingMemory = safetyMemory - shuffleMemory - storageMemory
-  val workingMemoryPerCore = workingMemory / totalCores
+  val workingMemoryPerCore = workingMemory / numCoresPerExecutor
   val workingMemoryPerCoreMB = workingMemoryPerCore * 1024
 
   println("Compute layout:")
@@ -51,4 +51,4 @@ def calculate(numExecutors: Int, numCoresPerExecutor: Int, executorMemory: Doubl
   println(f" working memory per core: $workingMemoryPerCoreMB%1.2f MB")
 }
 
-calculate(numExecutors = 128, numCoresPerExecutor = 16, executorMemory = 16.0)
+calculate(numExecutors = 256, numCoresPerExecutor = 6, executorMemory = 24.0)

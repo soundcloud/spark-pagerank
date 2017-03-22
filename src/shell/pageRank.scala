@@ -12,15 +12,16 @@ val prior = 1.0 / numVertices
 val graph = Graph.fromEdges(
   edges,
   defaultValue = prior,
-  vertexStorageLevel = StorageLevel.MEMORY_AND_DISK,
-  edgeStorageLevel = StorageLevel.MEMORY_AND_DISK
+  vertexStorageLevel = StorageLevel.MEMORY_AND_DISK_2,
+  edgeStorageLevel = StorageLevel.MEMORY_AND_DISK_2
 )
 
 val pr = PageRank.run(
   graph,
   teleportProb = 0.15,
-  maxIterations = 2,
-  convergenceThreshold = None
+  maxIterations = 5,
+  convergenceThresholdOpt = None,
+  numVerticesOpt = Some(numVertices)
 )
 
 pr.saveAsObjectFile(outputPath)

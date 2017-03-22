@@ -19,7 +19,6 @@ object PageRank extends GraphUtils {
 
   val DefaultTeleportProb: Double = 0.15
   val DefaultMaxIterations: Int = 100
-  val DefaultConvergenceThreshold: Option[Double] = None
 
   /**
    * Validates the structure of the input PageRank graph. See: {{#run}}.
@@ -49,8 +48,12 @@ object PageRank extends GraphUtils {
    * @param teleportProb probability of a random jump in the graph
    * @param maxIterations a threshold on the maximum number of iterations,
    *          irrespective of convergence
-   * @param convergenceThreshold a threshold on the change between iterations
+   * @param convergenceThresholdOpt a threshold on the change between iterations
    *          which marks convergence
+   * @param numVerticesOpt the number of vertices in the input graph calculated
+   *          lazily from {{inputGraph}} if none is provided here (requires one
+   *          extra job so this is an optimization if you already have this
+   *          value)
    *
    * @return the PageRank vector
    */
@@ -58,18 +61,19 @@ object PageRank extends GraphUtils {
     inputGraph: PageRankGraph,
     teleportProb: Double = DefaultTeleportProb,
     maxIterations: Int = DefaultMaxIterations,
-    convergenceThreshold: Option[Double] = DefaultConvergenceThreshold): VectorRDD = {
+    convergenceThresholdOpt: Option[Double] = None,
+    numVerticesOpt: Option[Long] = None): VectorRDD = {
 
     require(teleportProb >= 0.0, "Teleport probability must be greater than or equal to 0.0")
     require(teleportProb < 1.0, "Teleport probability must be less than 1.0")
     require(maxIterations > 0, "Max iterations must be greater than 0")
 
-    convergenceThreshold.map { t =>
+    convergenceThresholdOpt.map { t =>
       require(t > 0.0, "Convergence threshold must be greater than 0.0")
       require(t < 1.0, "Convergence threshold must less than 1.0")
     }
 
-    val numVertices = inputGraph.numVertices // lazily calculated, but constant over all iterations
+    val numVertices = numVerticesOpt.getOrElse(inputGraph.numVertices) // lazily calculated when needed, constant over all iterations
     var graph = buildWorkingPageRankGraph(inputGraph)
 
     /**
@@ -145,7 +149,7 @@ object PageRank extends GraphUtils {
       graph = iterate(graph)
 
       // check for convergence (if threshold was provided)
-      convergenceThreshold.map { t =>
+      convergenceThresholdOpt.map { t =>
         hasConverged = delta(previousGraph.vertices, graph.vertices) < t
       }
       numIterations += 1
