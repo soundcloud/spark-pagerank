@@ -58,6 +58,13 @@ object PlainPageRank {
    * persisted again at the same {{StorageLevel}} as they are mutated after each
    * iteration.
    *
+   * TODO(jd): add local RDD checkpointing to truncate DAG/parents, after every
+   *           iteration, this requires that dynamic allocation is off so also
+   *           validate this at the start of the run by looking in the conf if
+   *           possible (and document all this in here)
+   * TODO(jd): add optional validation after each iteration, ensuring normalized
+   *           vector (?)
+   *
    * The structural requirements of the input graph are not enforced at runtime
    * but can be checking using supporting methods. To ensure a proper graph,
    * it is also suggested to use the supporting graph building methods. In

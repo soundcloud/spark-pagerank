@@ -17,7 +17,9 @@ object PlainPageRankApp extends App {
   val outputPath = "/user/josh/discorank/pagerank"
 
   val numPartitions = 4096
-  val storageLevel = StorageLevel.MEMORY_AND_DISK_2
+  val storageLevel = StorageLevel.MEMORY_AND_DISK
+
+  // TODO(jd): all of the prep vertices should be done once in the "build graph" script
 
   val edges = sc
     .objectFile[XEdge[Double]](edgesPath)

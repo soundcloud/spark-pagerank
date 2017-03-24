@@ -1,5 +1,5 @@
 /**
- * Determines the compute and memory layouts given a Spark configuration.
+ * Determines the compute and memory layouts given a Spark 1.4.x configuration.
  *
  * This should be run by applying all of the configuration except for the
  * executor settings (as this would waste resources). E.g.:

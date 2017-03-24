@@ -9,7 +9,6 @@ cat ":load buildGraph.scala" | crun -i -o "--net=host -e HADOOP_USER_NAME=josh" 
   --conf "spark.hadoop.yarn.timeline-service.enabled=false" \
   --conf "spark.executorEnv.HADOOP_USER_NAME=$HADOOP_USER_NAME" \
   --conf "spark.dynamicAllocation.enabled=false" \
-  --conf "spark.storage.memoryFraction=0.8" \
   --jars spark-pagerank_*.jar
  */
 
