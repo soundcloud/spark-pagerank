@@ -1,6 +1,4 @@
-# spark-pagerank
-
-PageRank in Spark with GraphX.
+PageRank in Spark.
 
 Please contact [Josh](mailto:josh@soundcloud.com) for questions or comments.
 
@@ -11,6 +9,7 @@ Include it as a dependency in your sbt project:
 
 ## Features
 
+- fast iterations
 - convergence threshold
 - number of iterations threshold
 - parameterized "teleport" probability
