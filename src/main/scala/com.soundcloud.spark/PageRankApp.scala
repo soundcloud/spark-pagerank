@@ -1,7 +1,7 @@
 package com.soundcloud.spark
 
 import org.apache.spark.SparkContext
-import org.apache.spark.graphx.{ Edge, Graph, VertexId }
+import org.apache.spark.graphx.{ Edge => XEdge, VertexId => XVertexId }
 import org.apache.spark.storage.StorageLevel
 
 /**
@@ -17,8 +17,23 @@ object PageRankApp extends App {
   val outputPath = "/user/josh/discorank/pagerank"
 
   val numPartitions = 4096
-  val edges = sc.objectFile[Edge[Double]](edgesPath).coalesce(numPartitions)
-  val vertices = sc.objectFile[(VertexId, Double)](vertexPath).coalesce(numPartitions)
+  val storageLevel = StorageLevel.MEMORY_AND_DISK
+
+  // TODO(jd): all of the prep vertices should be done once in the "build graph" script
+
+  val edges = sc
+    .objectFile[XEdge[Double]](edgesPath)
+    .coalesce(numPartitions)
+    .map { edge =>
+      (edge.srcId, PageRank.Edge(edge.dstId, edge.attr))
+    }
+    .persist(storageLevel)
+  val vertexValues = sc
+    .objectFile[(XVertexId, Double)](vertexPath)
+    .coalesce(numPartitions)
+  val vertices = PageRank
+    .buildVerticesFromVertexValues(edges, vertexValues)
+    .persist(storageLevel)
 
   val numVertices = sc
     .textFile(statsPath)
@@ -35,16 +50,9 @@ object PageRankApp extends App {
   println(s"numVertices: $numVertices")
   println(s"prior: $prior")
 
-  val graph = Graph.apply(
-    vertices,
-    edges,
-    defaultVertexAttr = prior,
-    vertexStorageLevel = StorageLevel.MEMORY_AND_DISK_2,
-    edgeStorageLevel = StorageLevel.MEMORY_AND_DISK_2
-  )
-
   val pr = PageRank.run(
-    graph,
+    edges,
+    vertices,
     teleportProb = 0.15,
     maxIterations = 5,
     convergenceThresholdOpt = None,

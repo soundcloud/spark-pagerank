@@ -38,22 +38,13 @@ val edges = GraphUtils.
   normalizeOutEdgeWeightsRDD(tsvToEdges(raw)).
   persist(StorageLevel.MEMORY_AND_DISK)
 
-val numEdges = edges.count()
-
-// build vertices and get vertex stats
-val vertexIds = edges.
-  flatMap(e => Seq(e.srcId, e.dstId)).
-  distinct().
-  persist(StorageLevel.MEMORY_AND_DISK)
-
-val numVertices = vertexIds.count()
-val prior = 1.0 / numVertices
-
-val vertices = vertexIds.map(id => (id, prior))
+// vertices...
 
 // save RDDs
 edges.saveAsObjectFile(edgesPath)
 vertices.saveAsObjectFile(verticesPath)
+
+val numEdges = edges.count()
 
 // save stats
 sc.
