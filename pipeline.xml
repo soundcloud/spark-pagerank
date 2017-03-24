@@ -1,0 +1,17 @@
+<pipeline name="spark-pagerank" labeltemplate="${COUNT}-${git[:7]}" isLocked="false">
+  <materials>
+    <git url="git@github.com:soundcloud/spark-pagerank.git" materialName="git"/>
+  </materials>
+  <stage name="test">
+    <jobs>
+      <job name="test">
+        <tasks>
+           <exec command="make">
+             <arg>test</arg>
+             <runif status="passed"/>
+           </exec>
+        </tasks>
+      </job>
+    </jobs>
+  </stage>
+</pipeline>
