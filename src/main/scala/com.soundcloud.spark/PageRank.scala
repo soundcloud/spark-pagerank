@@ -1,5 +1,6 @@
 package com.soundcloud.spark
 
+import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
 
@@ -72,12 +73,17 @@ object PageRank {
   }
 
   /**
-   * Runs PageRank using the RDD APIs of Spark. This supports weighted edges and
-   * "dangling" vertices (no out edges). For performance considerations, the
-   * {{edges}} and {{vertices}} must already be cached (ideally in-memory) and
-   * this will be verified at runtime. The vertices will be unpersisted and
-   * persisted again at the same {{StorageLevel}} as they are mutated after each
-   * iteration.
+   * Runs PageRank using Spark's RDD API.
+   *
+   * This implementation supports weighted edges and "dangling" vertices
+   * (no out edges). For performance considerations, the {{edges}} and
+   * {{vertices}} must already be cached (ideally in-memory) and this will be
+   * verified at runtime. The vertices will be unpersisted and persisted again
+   * at the same {{StorageLevel}} as they are mutated after each iteration.
+   * Since PageRank is iterative, but builds upon mutating these vertices, we
+   * also make use of RDD local checkpointing. This requires that Spark's
+   * dynamic allocation feature not be used, and this will be checked at
+   * runtime.
    *
    * The structural requirements of the input graph are not enforced at runtime
    * but can be checking using supporting methods. To ensure a proper graph,
@@ -130,6 +136,13 @@ object PageRank {
       require(n >= 2, "Number of vertices must be greater than or equal to 2")
     }
 
+    // local RDD checkpointing cannot be used with dynamic allocation
+    // see below for when this is used
+    require(
+      dynamicAllocationDisabled(vertices.context.getConf),
+      "Executor dynamic allocation must be off since this uses RDD local checkpointing"
+    )
+
     // lazily calculated when needed, constant over all iterations
     val numVertices = numVerticesOpt.getOrElse(vertices.count())
 
@@ -158,12 +171,24 @@ object PageRank {
       // finished with the previousVertices, so unpersist them
       previousVertices.unpersist()
 
+      // now that we have one iteration done, also checkpoint the current
+      // vertices to remove the RDD parent lineage
+      newVertices.localCheckpoint()
+
       numIterations += 1
     }
 
     // vertices from the last iteration performed
     newVertices
   }
+
+  /**
+   * Checks to see if executor dynamic allocation is off by introspecting the
+   * Spark configuration. If the configuration value is not explicitly set, we
+   * assume that dynamic allocation is disabled.
+   */
+  private[spark] def dynamicAllocationDisabled(conf: SparkConf): Boolean =
+    !conf.getBoolean("spark.dynamicAllocation.enabled", false)
 
   /**
    * A single PageRank iteration.
