@@ -6,7 +6,8 @@ clean:
 
 .PHONY: distclean
 distclean:
-	rm -rf project/target project/build
+	rm -rf .deps .ivy2 .sbt
+	rm -rf project/project project/target target
 
 .PHONY: package
 package:
