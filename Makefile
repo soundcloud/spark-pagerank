@@ -1,13 +1,4 @@
-.PHONY: all
-all: build
-
-.PHONY: build
-build: test
-	./sbt package
-
-.PHONY: test
-test:
-	./sbt test
+all: test package
 
 .PHONY: clean
 clean:
@@ -16,3 +7,11 @@ clean:
 .PHONY: distclean
 distclean:
 	rm -rf project/target project/build
+
+.PHONY: package
+package:
+	./sbt package
+
+.PHONY: test
+test:
+	./sbt test
