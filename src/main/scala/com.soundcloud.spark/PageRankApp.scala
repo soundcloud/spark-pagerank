@@ -19,8 +19,6 @@ object PageRankApp extends App {
   val numPartitions = 4096
   val storageLevel = StorageLevel.MEMORY_AND_DISK
 
-  // TODO(jd): all of the prep vertices should be done once in the "build graph" script
-
   val edges = sc
     .objectFile[XEdge[Double]](edgesPath)
     .coalesce(numPartitions)

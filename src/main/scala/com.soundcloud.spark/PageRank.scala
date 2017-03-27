@@ -71,20 +71,6 @@ object PageRank {
       }
   }
 
-  // TODO(jd): migrate from GraphX API to internal API
-  // /**
-  //  * Validates the structure of the input PageRank graph. See: {{#run}}.
-  //  */
-  // def validateGraphStructure(edges: Edges, vertices: Vertices) {
-  //   val numSelfReferences = countSelfReferences(graph.edges)
-  //   val verticesAreNormalized = areVerticesNormalized(graph.vertices)
-  //   val numVerticesWithoutNormalizedOutEdges = countVerticesWithoutNormalizedOutEdges(graph.edges)
-
-  //   require(numSelfReferences == 0, "Number of vertices with self-referencing edges must be 0")
-  //   require(verticesAreNormalized, "Input vertices values must be normalized")
-  //   require(numVerticesWithoutNormalizedOutEdges == 0, "Number of vertices without normalized out edges must be 0")
-  // }
-
   /**
    * Runs PageRank using the RDD APIs of Spark. This supports weighted edges and
    * "dangling" vertices (no out edges). For performance considerations, the
@@ -92,13 +78,6 @@ object PageRank {
    * this will be verified at runtime. The vertices will be unpersisted and
    * persisted again at the same {{StorageLevel}} as they are mutated after each
    * iteration.
-   *
-   * TODO(jd): add local RDD checkpointing to truncate DAG/parents, after every
-   *           iteration, this requires that dynamic allocation is off so also
-   *           validate this at the start of the run by looking in the conf if
-   *           possible (and document all this in here)
-   * TODO(jd): add optional validation after each iteration, ensuring normalized
-   *           vector (?)
    *
    * The structural requirements of the input graph are not enforced at runtime
    * but can be checking using supporting methods. To ensure a proper graph,

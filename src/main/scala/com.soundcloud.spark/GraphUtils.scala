@@ -7,8 +7,6 @@ import org.apache.spark.rdd.RDD
 
 /**
  * Some general-purpose graph operations and utilities.
- *
- * TODO(jd): move to `spark-lib`
  */
 object GraphUtils {
 
