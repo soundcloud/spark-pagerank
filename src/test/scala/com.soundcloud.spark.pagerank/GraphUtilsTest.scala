@@ -1,9 +1,9 @@
-package com.soundcloud.spark
+package com.soundcloud.spark.pagerank
 
 import org.apache.spark.graphx.Graph
 import org.scalatest.{ FunSuite, Matchers }
 
-import com.soundcloud.spark.GraphUtils._
+import com.soundcloud.spark.pagerank.GraphUtils._
 import com.soundcloud.spark.test.SparkTesting
 
 class GraphUtilsTest

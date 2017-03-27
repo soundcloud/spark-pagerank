@@ -1,4 +1,4 @@
-package com.soundcloud.spark
+package com.soundcloud.spark.pagerank
 
 import scala.reflect.ClassTag
 

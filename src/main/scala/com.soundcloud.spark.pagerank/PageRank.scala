@@ -1,10 +1,10 @@
-package com.soundcloud.spark
+package com.soundcloud.spark.pagerank
 
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
 
-import com.soundcloud.spark.GraphUtils._
+import com.soundcloud.spark.pagerank.GraphUtils._
 
 object PageRank {
 

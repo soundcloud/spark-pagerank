@@ -1,4 +1,4 @@
-package com.soundcloud.spark
+package com.soundcloud.spark.pagerank
 
 import org.apache.spark.SparkContext
 import org.apache.spark.graphx.{ Edge => XEdge, VertexId => XVertexId }
