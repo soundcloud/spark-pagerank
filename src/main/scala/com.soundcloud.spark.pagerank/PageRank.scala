@@ -8,69 +8,8 @@ import com.soundcloud.spark.pagerank.GraphUtils._
 
 object PageRank {
 
-  type VertexId = Long
-  type VertexValue = Double
-  type EdgeValue = Double
-
-  type Edges = RDD[(VertexId, Edge)] // (srcId, Edge) -- optimal for joins
-  type Vertices = RDD[(VertexId, VertexMetadata)]
-
-  case class Edge(dstId: VertexId, weight: EdgeValue)
-  case class VertexMetadata(value: VertexValue, isDangling: Boolean) {
-    /**
-     * Copies the vertex properties but provides a new value. This creates a new
-     * immutable vertex instance.
-     */
-    def withNewValue(newValue: VertexValue): VertexMetadata =
-      VertexMetadata(newValue, isDangling)
-  }
-
-  val DefaultTeleportProb: VertexValue = 0.15
+  val DefaultTeleportProb: Value = 0.15
   val DefaultMaxIterations: Int = 100
-
-  /**
-   * Builds vertices with uniform values/priors given edges in the graph. This
-   * can be used as a starting point for the first iteration of PageRank. This
-   * does not add any flag for dangling nodes, which needs to be done after
-   * this.
-   */
-  def buildUniformVertexValues(edges: Edges): (VertexId, RDD[(VertexId, VertexValue)]) = {
-    // build vertices and get vertex stats
-    val vertexIds = edges
-      .flatMap(e => Seq(e._1, e._2.dstId))
-      .distinct()
-
-    val numVertices = vertexIds.count()
-    val prior = 1.0 / numVertices
-
-    val rdd = vertexIds.map(id => (id, prior))
-    (numVertices, rdd)
-  }
-
-  /**
-   * Builds vertices RDD from just ID and value pairs, by attaching the dangling
-   * flag for vertices with no out-edges.
-   */
-  def buildVerticesFromVertexValues(
-      edges: Edges,
-      vertices: RDD[(VertexId, VertexValue)]): Vertices = {
-
-    val a = edges.map(_._1).distinct.map(x => (x, 1)) // srcId
-    val b = edges.map(_._2.dstId).distinct.map(x => (x, 1)) // dstId
-
-    val dangles = a
-      .cogroup(b)
-      .map { case(id, vals) =>
-        val isDangling = vals._1.size == 0 && vals._2.size == 1
-        (id, isDangling)
-      }
-
-    vertices
-      .join(dangles)
-      .map { case(id, (value, isDangling)) =>
-        (id, VertexMetadata(value, isDangling))
-      }
-  }
 
   /**
    * Runs PageRank using Spark's RDD API.
@@ -95,8 +34,7 @@ object PageRank {
    *  - Vertex values are normalized (i.e. sum to `1.0`)
    *  - Edge weights are normalized (i.e. outgoing edge values sum to `1.0`)
    *
-   * @param edges the edges of the graph
-   * @param vertices the vertices of the graph
+   * @param graph the prepared {{PageRankGraph}} to operate on
    * @param teleportProb probability of a random jump in the graph
    * @param maxIterations a threshold on the maximum number of iterations,
    *          irrespective of convergence
@@ -104,50 +42,35 @@ object PageRank {
    *          iterations which marks convergence (NOTE: providing this will
    *          cause an extra computation after each iteration, so if performance
    *          is of concern, do not provide a value here)
-   * @param numVerticesOpt the number of vertices in the input graph calculated
-   *          lazily from {{vertices}} if none is provided here (requires one
-   *          extra job so this is an optimization if you already have this
-   *          value, for example from building vertices with a uniform value
-   *          distribution for a prior)
    *
    * @return the PageRank vector
    */
   def run(
-    edges: Edges,
-    vertices: Vertices,
-    teleportProb: VertexValue = DefaultTeleportProb,
+    graph: PageRankGraph,
+    teleportProb: Value = DefaultTeleportProb,
     maxIterations: Int = DefaultMaxIterations,
-    convergenceThresholdOpt: Option[VertexValue] = None,
-    numVerticesOpt: Option[VertexId] = None): Vertices = {
+    convergenceThresholdOpt: Option[Value] = None): VertexRDD = {
 
-    require(edges.getStorageLevel != StorageLevel.NONE, "Storage level of edges cannot be `NONE`")
-    require(vertices.getStorageLevel != StorageLevel.NONE, "Storage level of vertices cannot be `NONE`")
+    require(graph.edges.getStorageLevel != StorageLevel.NONE, "Storage level of edges cannot be `NONE`")
+    require(graph.vertices.getStorageLevel != StorageLevel.NONE, "Storage level of vertices cannot be `NONE`")
 
     require(teleportProb >= 0.0, "Teleport probability must be greater than or equal to 0.0")
     require(teleportProb < 1.0, "Teleport probability must be less than 1.0")
     require(maxIterations >= 1, "Max iterations must be greater than or equal to 1")
-
     convergenceThresholdOpt.map { t =>
       require(t > 0.0, "Convergence threshold must be greater than 0.0")
       require(t < 1.0, "Convergence threshold must less than 1.0")
     }
 
-    numVerticesOpt.map { n =>
-      require(n >= 2, "Number of vertices must be greater than or equal to 2")
-    }
-
     // local RDD checkpointing cannot be used with dynamic allocation
     // see below for when this is used
     require(
-      dynamicAllocationDisabled(vertices.context.getConf),
+      dynamicAllocationDisabled(graph.vertices.context.getConf),
       "Executor dynamic allocation must be off since this uses RDD local checkpointing"
     )
 
-    // lazily calculated when needed, constant over all iterations
-    val numVertices = numVerticesOpt.getOrElse(vertices.count())
-
     // iterate until the maximum number of iterations or until convergence (optional)
-    var newVertices = vertices
+    var newVertices = graph.vertices
     var hasConverged = false
     var numIterations = 0
     while (!hasConverged && numIterations < maxIterations) {
@@ -160,7 +83,7 @@ object PageRank {
       // this will create new vertices
       // persist the new vertices at the same level as the previous vertices
       newVertices =
-        iterate(edges, previousVertices, teleportProb, numVertices)
+        iterate(graph.edges, previousVertices, teleportProb, graph.numVertices)
           .persist(previousVertices.getStorageLevel)
 
       // check for convergence (if threshold was provided)
@@ -178,8 +101,10 @@ object PageRank {
       numIterations += 1
     }
 
-    // vertices from the last iteration performed
-    newVertices
+    // vertices from the last iteration performed, but simplified back to VertexRDD
+    newVertices.map { case (id, meta) =>
+      Vertex(id, meta.value)
+    }
   }
 
   /**
@@ -187,23 +112,23 @@ object PageRank {
    * Spark configuration. If the configuration value is not explicitly set, we
    * assume that dynamic allocation is disabled.
    */
-  private[spark] def dynamicAllocationDisabled(conf: SparkConf): Boolean =
+  private[pagerank] def dynamicAllocationDisabled(conf: SparkConf): Boolean =
     !conf.getBoolean("spark.dynamicAllocation.enabled", false)
 
   /**
    * A single PageRank iteration.
    */
-  private[spark] def iterate(
-      edges: Edges,
-      vertices: Vertices,
-      teleportProb: VertexValue,
-      numVertices: VertexId): Vertices = {
+  private[pagerank] def iterate(
+      edges: OutEdgePairRDD,
+      vertices: RichVertexPairRDD,
+      teleportProb: Value,
+      numVertices: Id): RichVertexPairRDD = {
 
     /**
      * Calculates the new PageRank value of a vertex given the incoming
      * probability mass plus the teleport probability.
      */
-    def calculateVertexUpdate(incomingSum: VertexValue): VertexValue =
+    def calculateVertexUpdate(incomingSum: Value): Value =
       ((1 - teleportProb) * incomingSum) + (teleportProb / numVertices)
 
     /**
@@ -211,7 +136,7 @@ object PageRank {
      * update. Note the `n - 1` is to account for no self-references in this
      * node we are updating.
      */
-    def calculateDanglingVertexUpdate(startingValue: VertexValue): VertexValue =
+    def calculateDanglingVertexUpdate(startingValue: Value): Value =
       (1 - teleportProb) * (1.0 / (numVertices - 1)) * startingValue
 
     /**
@@ -226,9 +151,9 @@ object PageRank {
      *    among all nodes.
      */
     def updateVertex(
-        perVertexMissingMass: VertexValue,
+        perVertexMissingMass: Value,
         vMeta: VertexMetadata,
-        incomingSumOpt: Option[VertexValue]): VertexMetadata = {
+        incomingSumOpt: Option[Value]): VertexMetadata = {
 
       val incomingSum = incomingSumOpt.getOrElse(0.0)
       val newValue = calculateVertexUpdate(incomingSum) + perVertexMissingMass
@@ -241,10 +166,10 @@ object PageRank {
 
     // collect what *will be* the dangling mass after the update that follows
     val danglingMass =
-      vertices.
-        filter(_._2.isDangling).
-        map(_._2.value).
-        sum()
+      vertices
+        .filter(_._2.isDangling)
+        .map(_._2.value)
+        .sum()
 
     // send weights along edges to destinations
     val incomingSumPerVertex = edges
@@ -252,8 +177,8 @@ object PageRank {
       .map { case(_, (edge, vMeta)) =>
         // sends a proportional amount of mass to the destination
         (edge.dstId, vMeta.value * edge.weight)
-      }.
-      reduceByKey(_ + _)
+      }
+      .reduceByKey(_ + _)
 
     // distribute missing mass from dangling nodes equally to all other nodes
     val perVertexMissingMass = calculateDanglingVertexUpdate(danglingMass)
@@ -270,12 +195,12 @@ object PageRank {
    * Calculates the per-component change/delta and sums over all components
    * (norm) to determine the total change/delta between the two vectors.
    */
-  private[spark] def delta(left: Vertices, right: Vertices): VertexValue = {
-    left.
-      join(right).
-      map { case (_, (l, r)) =>
+  private[pagerank] def delta(left: RichVertexPairRDD, right: RichVertexPairRDD): Value = {
+    left
+      .join(right)
+      .map { case (_, (l, r)) =>
         math.abs(l.value - r.value)
-      }.
-      sum()
+      }
+      .sum()
   }
 }

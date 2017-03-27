@@ -3,63 +3,11 @@ package com.soundcloud.spark.pagerank
 import org.apache.spark.storage.StorageLevel
 import org.scalatest.{ FunSuite, Matchers }
 
-import com.soundcloud.spark.pagerank.GraphUtils._
-import com.soundcloud.spark.test.SparkTesting
-
 class PageRankTest
   extends FunSuite
   with Matchers
   with GraphTesting
   with SparkTesting {
-
-  test("builder: build uniform vertex values") {
-    val edges = sc.parallelize(Seq[(PageRank.VertexId, PageRank.Edge)](
-      // node 1 is dangling
-      (2, PageRank.Edge(1, 1.0)),
-      (3, PageRank.Edge(1, 1.0)),
-      (4, PageRank.Edge(2, 1.0)),
-      (4, PageRank.Edge(3, 1.0)),
-      (5, PageRank.Edge(3, 1.0)),
-      (5, PageRank.Edge(4, 1.0))
-    ))
-    val (numVertices, rdd) = PageRank.buildUniformVertexValues(edges)
-
-    val expectedNumVertices = 5
-    val expectedPrior = 1.0 / expectedNumVertices
-
-    numVertices shouldBe expectedNumVertices
-    rdd.collect().sorted shouldBe Seq(
-      (1, expectedPrior),
-      (2, expectedPrior),
-      (3, expectedPrior),
-      (4, expectedPrior),
-      (5, expectedPrior)
-    )
-  }
-
-  test("builder: build vertices from just vertex values") {
-    val edges = sc.parallelize(Seq[(PageRank.VertexId, PageRank.Edge)](
-      // node 1 is dangling
-      (2, PageRank.Edge(1, 1.0)),
-      (3, PageRank.Edge(1, 1.0)),
-      (4, PageRank.Edge(2, 1.0)),
-      (4, PageRank.Edge(3, 1.0)),
-      (5, PageRank.Edge(3, 1.0)),
-      (5, PageRank.Edge(4, 1.0))
-    ))
-
-    val (numVertices, vertexValues) = PageRank.buildUniformVertexValues(edges)
-    val vertices = PageRank.buildVerticesFromVertexValues(edges, vertexValues).collect()
-    val prior = vertexValues.first._2 // just use one, they are all the same
-
-    vertices.sortBy(_._1) shouldBe Seq(
-      (1, PageRank.VertexMetadata(prior, true)),
-      (2, PageRank.VertexMetadata(prior, false)),
-      (3, PageRank.VertexMetadata(prior, false)),
-      (4, PageRank.VertexMetadata(prior, false)),
-      (5, PageRank.VertexMetadata(prior, false))
-    )
-  }
 
   test("PageRank: graph without weights, without dangling (1)") {
     // https://github.com/purzelrakete/Pagerank.jl/blob/070a193826f6ff7c2fe11fb5556f21d039b82e26/test/data/simple.dot
@@ -196,45 +144,40 @@ class PageRankTest
   }
 
   private def execTest(
-    input: Seq[(Int, Int, Double)],
+    input: Seq[EdgeTuple],
     expected: Seq[(Int, Double)],
     teleportProb: Double,
     maxIterations: Int,
     convergenceThreshold: Option[Double]): Unit = {
 
-    val rdd = sc.parallelize(expandEdgeTuples(input))
-    val edges = normalizeOutEdgeWeightsRDD(rdd)
-      .map { e =>
-        (e.srcId, PageRank.Edge(e.dstId, e.attr))
-      }
-      .persist(StorageLevel.MEMORY_ONLY)
-
-    val (numVertices, vertexValues) = PageRank
-      .buildUniformVertexValues(edges)
-    val vertices = PageRank
-      .buildVerticesFromVertexValues(edges, vertexValues)
-      .persist(StorageLevel.MEMORY_ONLY)
+    val edges = GraphUtils.normalizeOutEdgeWeights(input).persist(StorageLevel.MEMORY_ONLY)
+    val graph = PageRankGraph.uniformPriorsFromEdges(
+      edges,
+      tmpStorageLevel = StorageLevel.MEMORY_ONLY,
+      edgesStorageLevel = StorageLevel.MEMORY_ONLY,
+      verticesStorageLevel = StorageLevel.MEMORY_ONLY
+    )
 
     val actual = PageRank
       .run(
-        edges,
-        vertices,
+        graph,
         teleportProb,
         maxIterations,
-        convergenceThreshold,
-        Some(numVertices)
+        convergenceThreshold
       )
       .collect()
 
     // error between each component, expected vs actual
-    def squaredError(actual: Seq[(Long, PageRank.VertexMetadata)], expected: Seq[(Int, Double)]): Double = {
+    def squaredError(actual: Seq[Vertex], expected: Seq[(Int, Double)]): Double = {
       val expectedMap = expected.toMap
-      actual.map { case (id, vMeta) =>
-        math.pow(vMeta.value - expectedMap.getOrElse(id.toInt, 0.0), 2)
-      }.sum
+      actual
+        .map { vertex =>
+          math.pow(vertex.value - expectedMap.getOrElse(vertex.id.toInt, 0.0), 2)
+        }
+        .sum
     }
 
-    actual.map(_._2.value).sum shouldBe 1.0 +- EPS
+    actual.map(_.value).sum shouldBe 1.0 +- EPS
     squaredError(actual, expected) shouldBe 0.0 +- math.pow(10, -5)
   }
 }

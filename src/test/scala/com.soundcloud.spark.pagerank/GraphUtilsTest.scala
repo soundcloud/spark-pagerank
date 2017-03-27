@@ -1,10 +1,6 @@
 package com.soundcloud.spark.pagerank
 
-import org.apache.spark.graphx.Graph
 import org.scalatest.{ FunSuite, Matchers }
-
-import com.soundcloud.spark.pagerank.GraphUtils._
-import com.soundcloud.spark.test.SparkTesting
 
 class GraphUtilsTest
   extends FunSuite
@@ -16,21 +12,21 @@ class GraphUtilsTest
     val fixtures = Seq(
       (
         Seq(
-          (1, 2),
-          (3, 2),
-          (2, 1),
-          (2, 3)
+          (1, 2, 1.0),
+          (3, 2, 1.0),
+          (2, 1, 1.0),
+          (2, 3, 1.0)
         ),
         0
       ),
       (
         Seq(
-          (2, 1),
-          (3, 1),
-          (4, 2),
-          (4, 3),
-          (5, 3),
-          (5, 4)
+          (2, 1, 1.0),
+          (3, 1, 1.0),
+          (4, 2, 1.0),
+          (4, 3, 1.0),
+          (5, 3, 1.0),
+          (5, 4, 1.0)
           // 1 has no outgoing edges
           // 5 has no incoming edges
         ),
@@ -38,15 +34,15 @@ class GraphUtilsTest
       ),
       (
         Seq(
-          (2, 1),
-          (2, 5),
-          (3, 1),
-          (3, 4),
-          (3, 5),
-          (5, 1),
-          (5, 2),
-          (5, 3),
-          (6, 2)
+          (2, 1, 1.0),
+          (2, 5, 1.0),
+          (3, 1, 1.0),
+          (3, 4, 1.0),
+          (3, 5, 1.0),
+          (5, 1, 1.0),
+          (5, 2, 1.0),
+          (5, 3, 1.0),
+          (6, 2, 1.0)
           // 1 has no outgoing edges
           // 4 has no outgoing edges
           // 6 has no incoming edges
@@ -55,9 +51,9 @@ class GraphUtilsTest
       )
     )
 
-    fixtures.foreach { case(input, expected) =>
-      val rdd = sc.parallelize(expandEdgeTuples(input))
-      countDanglingVertices(rdd) shouldBe expected
+    fixtures.foreach { case (input, expected) =>
+      val actual = GraphUtils.countDanglingVertices(input)
+      actual shouldBe expected
     }
   }
 
@@ -65,42 +61,58 @@ class GraphUtilsTest
     val fixtures = Seq(
       (
         Seq(
-          (1, 3),
-          (3, 1),
-          (4, 2),
-          (4, 3),
-          (5, 3),
-          (5, 4)
+          (1, 3, 1.0),
+          (3, 1, 1.0),
+          (4, 2, 1.0),
+          (4, 3, 1.0),
+          (5, 3, 1.0),
+          (5, 4, 1.0)
         ),
         0
       ),
       (
         Seq(
-          (1, 1),
-          (3, 1),
-          (4, 2),
-          (4, 3),
-          (5, 3),
-          (5, 4)
+          (1, 1, 1.0),
+          (3, 1, 1.0),
+          (4, 2, 1.0),
+          (4, 3, 1.0),
+          (5, 3, 1.0),
+          (5, 4, 1.0)
         ),
         1
       ),
       (
         Seq(
-          (1, 1),
-          (3, 1),
-          (4, 2),
-          (4, 4),
-          (5, 3),
-          (5, 4)
+          (1, 1, 1.0),
+          (3, 1, 1.0),
+          (4, 2, 1.0),
+          (4, 4, 1.0),
+          (5, 3, 1.0),
+          (5, 4, 1.0)
         ),
         2
       )
     )
 
-    fixtures.foreach { case(input, expected) =>
-      val rdd = sc.parallelize(expandEdgeTuples(input))
-      countSelfReferences(rdd) shouldBe expected
+    fixtures.foreach { case (input, expected) =>
+      val actual = GraphUtils.countSelfReferences(input)
+      actual shouldBe expected
+    }
+  }
+
+  test("are vertices normalized") {
+    val fixtures = Seq(
+      (Seq(0.1, 0.3, 0.3, 0.1, 0.2), true),
+      (Seq(1.0), true),
+      (Seq(0.0), false),
+      (Seq(1.0, 1.0), false),
+      (Seq(0.1, 0.1, 0.1), false)
+    )
+
+    fixtures.foreach { case (input, expected) =>
+      val rdd = sc.parallelize(input.zipWithIndex.map(x => Vertex(x._2, x._1)))
+      val actual = GraphUtils.areVerticesNormalized(rdd)
+      actual shouldBe expected
     }
   }
 
@@ -130,24 +142,9 @@ class GraphUtilsTest
       )
     )
 
-    fixtures.foreach { case(input, expected) =>
-      val rdd = sc.parallelize(expandEdgeTuples(input))
-      countVerticesWithoutNormalizedOutEdges(rdd) shouldBe expected
-    }
-  }
-
-  test("are vertices normalized") {
-    val fixtures = Seq(
-      (Seq(0.1, 0.3, 0.3, 0.1, 0.2), true),
-      (Seq(1.0), true),
-      (Seq(0.0), false),
-      (Seq(1.0, 1.0), false),
-      (Seq(0.1, 0.1, 0.1), false)
-    )
-
-    fixtures.foreach { case(input, expected) =>
-      val rdd = sc.parallelize(input.zipWithIndex.map(x => (x._2, x._1)))
-      areVerticesNormalized(rdd) shouldBe expected
+    fixtures.foreach { case (input, expected) =>
+      val actual = GraphUtils.countVerticesWithoutNormalizedOutEdges(input)
+      actual shouldBe expected
     }
   }
 
@@ -189,50 +186,10 @@ class GraphUtilsTest
       )
     )
 
-    fixtures.foreach { case(input, expected) =>
-      val rdd = sc.parallelize(expandEdgeTuples(input))
-      val normEdges = normalizeOutEdgeWeightsRDD(rdd).collect()
-      val actual = collapseEdges(normEdges)
-
+    fixtures.foreach { case (input, expected) =>
+      val rdd = GraphUtils.normalizeOutEdgeWeights(input)
+      val actual = edgeSeqToTupleSeq(rdd.collect())
       actual.sorted shouldBe expected.sorted
     }
-  }
-
-  test("remove self-references") {
-    val input = Seq(
-      (1, 2),
-      (2, 2), // has one other reference
-      (3, 3)
-    )
-    val expectedEdges = Seq(
-      (1, 2)
-    )
-    val expectedVertices = Seq(1, 2, 3)
-
-    val graph = removeSelfReferences(graphFromEdges(input))
-
-    collapseEdgesWithoutValue(graph.edges.collect()) shouldBe expectedEdges
-    graph.vertices.collect().map(_._1.toInt).sorted shouldBe expectedVertices
-  }
-
-  test("remove disconnected vertices") {
-    val edges = Seq(
-      (1, 2),
-      (3, 4),
-      (3, 1),
-      (4, 2)
-    ).sorted
-    val vertices =
-      Set[Long](1, 2, 3, 4, 100, 101).map((_, 0.0)).toSeq
-
-    val graph = Graph(
-      vertices = sc.parallelize(vertices),
-      edges = sc.parallelize(expandEdgeTuples(edges))
-    )
-
-    val newGraph = removeDisconnectedVertices(graph)
-
-    collapseEdgesWithoutValue(newGraph.edges.collect()).sorted shouldBe edges // unchanged
-    newGraph.vertices.collect().map(_._1).toSeq.sorted shouldBe (1 to 4).toSeq
   }
 }
