@@ -10,6 +10,7 @@ trait SparkApp {
 
   def main(args: Array[String]): Unit = {
     val sc = new SparkContext(new SparkConf())
+    sc.setLogLevel("WARN")
     run(args, sc)
     sc.stop()
   }

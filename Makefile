@@ -11,7 +11,7 @@ distclean:
 
 .PHONY: package
 package:
-	./sbt package
+	./sbt assembly
 
 .PHONY: test
 test:
