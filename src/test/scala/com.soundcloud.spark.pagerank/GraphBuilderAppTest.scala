@@ -12,6 +12,7 @@ class GraphBuilderAppTest
   test("integration test") {
     val options = new GraphBuilderApp.Options()
     options.output = "target/test/GraphBuilderAppTest"
+    options.numPartitions = 1
 
     val input = sc.parallelize(Seq(
       (1, 5, 1.0),

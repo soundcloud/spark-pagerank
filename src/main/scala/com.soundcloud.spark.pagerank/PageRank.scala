@@ -10,6 +10,8 @@ object PageRank {
 
   val DefaultTeleportProb: Value = 0.15
   val DefaultMaxIterations: Int = 100
+  val DefaultConvergenceThresholdOpt: Option[Value] = None
+  val DefaultShouldCheckpoint: Boolean = true
 
   /**
    * Runs PageRank using Spark's RDD API.
@@ -42,6 +44,10 @@ object PageRank {
    *          iterations which marks convergence (NOTE: providing this will
    *          cause an extra computation after each iteration, so if performance
    *          is of concern, do not provide a value here)
+   * @param shouldCheckpoint defines if the vector RDD should use checkpointing
+   *          to prune parent RDD's and keep the DAGs short, this should ALWAYS
+   *          be used at runtime and is only here for local testing which cannot
+   *          use checkpointing
    *
    * @return the PageRank vector
    */
@@ -49,7 +55,8 @@ object PageRank {
     graph: PageRankGraph,
     teleportProb: Value = DefaultTeleportProb,
     maxIterations: Int = DefaultMaxIterations,
-    convergenceThresholdOpt: Option[Value] = None): VertexRDD = {
+    convergenceThresholdOpt: Option[Value] = DefaultConvergenceThresholdOpt,
+    shouldCheckpoint: Boolean = DefaultShouldCheckpoint): VertexRDD = {
 
     require(graph.edges.getStorageLevel != StorageLevel.NONE, "Storage level of edges cannot be `NONE`")
     require(graph.vertices.getStorageLevel != StorageLevel.NONE, "Storage level of vertices cannot be `NONE`")
@@ -91,12 +98,17 @@ object PageRank {
         hasConverged = delta(previousVertices, newVertices) < t
       }
 
-      // finished with the previousVertices, so unpersist them
-      previousVertices.unpersist()
-
       // now that we have one iteration done, also checkpoint the current
-      // vertices to remove the RDD parent lineage
-      newVertices.localCheckpoint()
+      //   vertices to remove the RDD parent lineage, but before unpersisting
+      //   previousVertices
+      // FIXME(jd): Why does this fail during integration testing? It should
+      //            ideally always be on!
+      if (shouldCheckpoint)
+        newVertices.localCheckpoint()
+
+      // finished with the previousVertices, and the newVertices are persisted
+      //   and checkpointed, so unpersist this
+      previousVertices.unpersist()
 
       numIterations += 1
     }

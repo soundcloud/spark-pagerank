@@ -5,6 +5,9 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
 import org.kohsuke.args4j.{ CmdLineParser, Option }
 
+/**
+ * Builds a PageRank graph from (non-normalized) weighted edges.
+ */
 object GraphBuilderApp extends SparkApp {
   class Options {
     @Option(name = "--input", usage = "Input directory containing edges in TSV format (source, destination, weight)", required = true)
@@ -38,7 +41,7 @@ object GraphBuilderApp extends SparkApp {
     // coalesce to smaller number of partitions
     // convert to internal edges data type
     val weightedEdges = input
-      .coalesce(options.numPartitions)
+      .repartition(options.numPartitions)
       .map(parseEdge)
       .persist(StorageLevel.MEMORY_ONLY_2)
 
