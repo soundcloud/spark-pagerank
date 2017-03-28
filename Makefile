@@ -1,4 +1,4 @@
-all: test package
+all: package
 
 .PHONY: clean
 clean:

@@ -12,7 +12,6 @@ class PageRankAppTest
   test("integration test") {
     val options = new PageRankApp.Options()
     options.output = "target/test/PageRankAppTest"
-    options.shouldCheckpoint = false
 
     val numVertices = 5
     val prior = 1.0 / numVertices

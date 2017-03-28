@@ -11,7 +11,6 @@ object PageRank {
   val DefaultTeleportProb: Value = 0.15
   val DefaultMaxIterations: Int = 100
   val DefaultConvergenceThresholdOpt: Option[Value] = None
-  val DefaultShouldCheckpoint: Boolean = true
 
   /**
    * Runs PageRank using Spark's RDD API.
@@ -21,10 +20,6 @@ object PageRank {
    * {{vertices}} must already be cached (ideally in-memory) and this will be
    * verified at runtime. The vertices will be unpersisted and persisted again
    * at the same {{StorageLevel}} as they are mutated after each iteration.
-   * Since PageRank is iterative, but builds upon mutating these vertices, we
-   * also make use of RDD local checkpointing. This requires that Spark's
-   * dynamic allocation feature not be used, and this will be checked at
-   * runtime.
    *
    * The structural requirements of the input graph are not enforced at runtime
    * but can be checking using supporting methods. To ensure a proper graph,
@@ -44,10 +39,6 @@ object PageRank {
    *          iterations which marks convergence (NOTE: providing this will
    *          cause an extra computation after each iteration, so if performance
    *          is of concern, do not provide a value here)
-   * @param shouldCheckpoint defines if the vector RDD should use checkpointing
-   *          to prune parent RDD's and keep the DAGs short, this should ALWAYS
-   *          be used at runtime and is only here for local testing which cannot
-   *          use checkpointing
    *
    * @return the PageRank vector
    */
@@ -55,8 +46,7 @@ object PageRank {
     graph: PageRankGraph,
     teleportProb: Value = DefaultTeleportProb,
     maxIterations: Int = DefaultMaxIterations,
-    convergenceThresholdOpt: Option[Value] = DefaultConvergenceThresholdOpt,
-    shouldCheckpoint: Boolean = DefaultShouldCheckpoint): VertexRDD = {
+    convergenceThresholdOpt: Option[Value] = DefaultConvergenceThresholdOpt): VertexRDD = {
 
     require(graph.edges.getStorageLevel != StorageLevel.NONE, "Storage level of edges cannot be `NONE`")
     require(graph.vertices.getStorageLevel != StorageLevel.NONE, "Storage level of vertices cannot be `NONE`")
@@ -68,13 +58,6 @@ object PageRank {
       require(t > 0.0, "Convergence threshold must be greater than 0.0")
       require(t < 1.0, "Convergence threshold must less than 1.0")
     }
-
-    // local RDD checkpointing cannot be used with dynamic allocation
-    // see below for when this is used
-    require(
-      dynamicAllocationDisabled(graph.vertices.context.getConf),
-      "Executor dynamic allocation must be off since this uses RDD local checkpointing"
-    )
 
     // iterate until the maximum number of iterations or until convergence (optional)
     var newVertices = graph.vertices
@@ -101,10 +84,7 @@ object PageRank {
       // now that we have one iteration done, also checkpoint the current
       //   vertices to remove the RDD parent lineage, but before unpersisting
       //   previousVertices
-      // FIXME(jd): Why does this fail during integration testing? It should
-      //            ideally always be on!
-      if (shouldCheckpoint)
-        newVertices.localCheckpoint()
+      newVertices.checkpoint()
 
       // finished with the previousVertices, and the newVertices are persisted
       //   and checkpointed, so unpersist this

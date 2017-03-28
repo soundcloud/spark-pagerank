@@ -14,6 +14,7 @@ trait SparkTesting extends BeforeAndAfterAll { self: Suite =>
       .setMaster("local")
       .set("spark.hadoop.validateOutputSpecs", "false")
     sc = new SparkContext(conf)
+    sc.setCheckpointDir("target/test/checkpoints")
 
     super.beforeAll()
   }

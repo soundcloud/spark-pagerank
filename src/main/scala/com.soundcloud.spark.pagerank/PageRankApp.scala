@@ -25,9 +25,6 @@ object PageRankApp extends SparkApp {
     @ArgOption(name = "--convergenceThreshold", usage = "PageRank: an optional threshold on the change between iterations which marks convergence (NOTE: providing this will cause an extra computation after each iteration, so if performance is of concern, do not provide a value here)")
     var convergenceThreshold: Value = 0.0
 
-    @ArgOption(name = "--shouldCheckpoint", usage = "PageRank: at runtime, this should always be true, we use false only during integration testing")
-    var shouldCheckpoint: Boolean = PageRank.DefaultShouldCheckpoint
-
     def convergenceThresholdOpt: Option[Value] = convergenceThreshold match {
       case 0.0 => None
       case x => Some(x)
@@ -37,6 +34,8 @@ object PageRankApp extends SparkApp {
   def run(args: Array[String], sc: SparkContext): Unit = {
     val options = new Options()
     new CmdLineParser(options).parseArgument(args: _*)
+
+    sc.setCheckpointDir(s"__checkpoints_${options.output}")
 
     runFromInputs(
       options,
@@ -68,9 +67,9 @@ object PageRankApp extends SparkApp {
       graph,
       teleportProb = options.teleportProb,
       maxIterations = options.maxIterations,
-      convergenceThresholdOpt = options.convergenceThresholdOpt,
-      shouldCheckpoint = options.shouldCheckpoint
+      convergenceThresholdOpt = options.convergenceThresholdOpt
     )
+    .saveAsObjectFile(options.output)
   }
 
   private[pagerank] def extractStatistic[T](stats: Seq[String], key: String)(parse: (String) => T): T = {
