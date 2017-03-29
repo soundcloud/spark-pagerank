@@ -34,6 +34,13 @@ class PageRankAppTest
       (5, VertexMetadata(prior, false))
     ))
 
-    PageRankApp.runFromInputs(options, sc, stats, edges, vertices)
+    PageRankApp.runFromInputs(
+      options,
+      sc,
+      stats,
+      edges,
+      vertices,
+      priorsOpt = None
+    )
   }
 }

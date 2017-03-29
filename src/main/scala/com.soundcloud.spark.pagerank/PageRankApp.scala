@@ -16,6 +16,9 @@ object PageRankApp extends SparkApp {
     @ArgOption(name = "--output", usage = "Output directory for the final PageRank vertices", required = true)
     var output: String = _
 
+    @ArgOption(name = "--priors", usage = "Directory with priors to use, allowing PageRank to continue iterating after stopping, requiring the identical graph that was used to produce the priors")
+    var priors: String = _
+
     @ArgOption(name = "--teleportProb", usage = "PageRank: probability of a random jump in the graph")
     var teleportProb: Value = PageRank.DefaultTeleportProb
 
@@ -24,6 +27,11 @@ object PageRankApp extends SparkApp {
 
     @ArgOption(name = "--convergenceThreshold", usage = "PageRank: an optional threshold on the change between iterations which marks convergence (NOTE: providing this will cause an extra computation after each iteration, so if performance is of concern, do not provide a value here)")
     var convergenceThreshold: Value = 0.0
+
+    def priorsOpt: Option[String] = priors match {
+      case "" => None
+      case x => Some(x)
+    }
 
     def convergenceThresholdOpt: Option[Value] = convergenceThreshold match {
       case 0.0 => None
@@ -35,14 +43,15 @@ object PageRankApp extends SparkApp {
     val options = new Options()
     new CmdLineParser(options).parseArgument(args: _*)
 
-    sc.setCheckpointDir(s"__checkpoints_${options.output}")
+    sc.setCheckpointDir(s"${options.output}__checkpoints")
 
     runFromInputs(
       options,
       sc,
       sc.textFile(s"${options.input}/stats").collect(),
       sc.objectFile[OutEdgePair](s"${options.input}/edges"),
-      sc.objectFile[RichVertexPair](s"${options.input}/vertices")
+      sc.objectFile[RichVertexPair](s"${options.input}/vertices"),
+      options.priorsOpt.map(x => sc.objectFile[Vertex](s"$x"))
     )
   }
 
@@ -54,13 +63,19 @@ object PageRankApp extends SparkApp {
       sc: SparkContext,
       stats: Seq[String],
       edges: OutEdgePairRDD,
-      vertices: RichVertexPairRDD): Unit = {
+      vertices: RichVertexPairRDD,
+      priorsOpt: Option[VertexRDD]): Unit = {
+
+    val verticesForGraph = priorsOpt match {
+      case None => vertices
+      case Some(priors) => replaceValuesWithPriors(vertices, priors)
+    }
 
     // reassemble the PageRankGraph from it's constituent components
     val graph = PageRankGraph(
       extractStatistic(stats, "numVertices")(_.toLong),
       edges.persist(StorageLevel.MEMORY_AND_DISK_2),
-      vertices.persist(StorageLevel.MEMORY_AND_DISK_2)
+      verticesForGraph.persist(StorageLevel.MEMORY_AND_DISK_2)
     )
 
     PageRank.run(
@@ -70,6 +85,15 @@ object PageRankApp extends SparkApp {
       convergenceThresholdOpt = options.convergenceThresholdOpt
     )
     .saveAsObjectFile(options.output)
+  }
+
+  private[pagerank] def replaceValuesWithPriors(vertices: RichVertexPairRDD, priors: VertexRDD): RichVertexPairRDD = {
+    val priorsPairs = priors.map(x => (x.id, x.value))
+    vertices
+      .join(priorsPairs)
+      .map { case (id, (vMeta, prior)) =>
+        (id, vMeta.withNewValue(prior))
+      }
   }
 
   private[pagerank] def extractStatistic[T](stats: Seq[String], key: String)(parse: (String) => T): T = {
