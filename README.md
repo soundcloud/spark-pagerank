@@ -9,27 +9,32 @@ We run this on one of our behaviour graphs which consists of approximately 650M 
 Configuration example:
 
  - YARN
- - dynamic allocation: no
- - number of executors: 256
- - number of executor cores: 4
- - executor memory: 28G
+ - Dynamic allocation: no
+ - Number of executors: 256
+ - Number of executor cores: 4
+ - Executor memory: 28G
 
 ## Features
 
-- fast iterations
-- stopping criteria:
-  - number of iterations threshold
-  - convergence threshold
-- parameterised "teleport" probability
-- weighted edges (requires normalized out-edge weights)
-- supports "dangling" vertices (no out edges)
-- supports arbitrary (e.g. non-uniform) priors (as values in vertices)
-- utilities for building, preparing and validating input graphs
+- Fast iterations
+- Stopping criteria:
+  - Number of iterations threshold
+  - Convergence threshold
+- Parameterised "teleport" probability
+- Weighted edges (requires normalized out-edge weights)
+- Supports "dangling" vertices (no out edges)
+- Supports arbitrary (e.g. non-uniform) priors (as values in vertices)
+- Utilities for building, preparing and validating input graphs
 
 ## Usage
 
 Include it as a dependency in your sbt project:
 `"com.soundcloud" %% "spark-pagerank" % <version>`
+
+## Performance Tuning
+
+- Persist the edges and vertices of the graph with replicas: `StorageLevel.MEMORY_AND_DISK_2`
+- Enable Kryo serialization: `KryoSerialization.useKryo`
 
 ## Contact
 
