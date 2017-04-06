@@ -64,23 +64,14 @@ object GraphBuilderApp extends SparkApp {
       verticesStorageLevel = StorageLevel.NONE
     )
 
-    // save graph components
-    graph.edges.saveAsObjectFile(s"${options.output}/edges")
-    graph.vertices.saveAsObjectFile(s"${options.output}/vertices")
+    // save graph
+    PageRankGraph.save(graph, options.output)
 
     // run additional graph statistics (optional)
     // TODO(jd): does not exist yet
-    val extraStatistics = Seq.empty[String]
 
     // run graph validation (optional)
     // TODO(jd): does not exist yet
-
-    // save graph statistics as map in single partition
-    val basicStatistics = Seq(s"numVertices,${graph.numVertices}")
-    sc
-      .parallelize(basicStatistics ++ extraStatistics)
-      .repartition(1)
-      .saveAsTextFile(s"${options.output}/stats")
   }
 
   private[pagerank] def parseEdge(str: String): Edge = {

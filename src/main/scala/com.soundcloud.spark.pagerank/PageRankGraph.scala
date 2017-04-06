@@ -1,5 +1,6 @@
 package com.soundcloud.spark.pagerank
 
+import org.apache.spark.SparkContext
 import org.apache.spark.storage.StorageLevel
 
 final case class PageRankGraph(
@@ -14,6 +15,45 @@ final case class PageRankGraph(
 }
 
 object PageRankGraph {
+  /**
+   * Saves a graph in it's entirety to durable storage.
+   *
+   * Note that this uses "object files" and is thus loading the graph requires
+   * the samve binary version as Spark and this library that was used to save
+   * it.
+   */
+  def save(graph: PageRankGraph, path: String): Unit = {
+    // save graph components
+    graph.edges.saveAsObjectFile(s"$path/edges")
+    graph.vertices.saveAsObjectFile(s"$path/vertices")
+
+    // save the necessary statistics
+    Metadata.save(
+      graph.edges.context,
+      Seq(("numVertices", graph.numVertices)),
+      s"$path/stats"
+    )
+  }
+
+  /**
+   * Loads a graph from durable storage.
+   *
+   * See: #save for more details
+   */
+  def load(
+    sc: SparkContext,
+    path: String,
+    edgesStorageLevel: StorageLevel,
+    verticesStorageLevel: StorageLevel): PageRankGraph = {
+
+    val numVertices = Metadata.loadAndExtract(sc, s"$path/stats", "numVertices")(_.toLong)
+    PageRankGraph(
+      numVertices,
+      edges = sc.objectFile[OutEdgePair](s"$path/edges").persist(edgesStorageLevel),
+      vertices = sc.objectFile[RichVertexPair](s"$path/vertices").persist(verticesStorageLevel)
+    )
+  }
+
   /**
    * Given the edges of a graph, builds vertices with uniformly distributed
    * values and dangling nodes flags. This can be used as a starting point for

@@ -1,5 +1,6 @@
 package com.soundcloud.spark.pagerank
 
+import org.apache.spark.storage.StorageLevel
 import org.scalatest.{ FunSuite, Matchers }
 
 class PageRankAppTest
@@ -33,13 +34,16 @@ class PageRankAppTest
       (4, VertexMetadata(prior, false)),
       (5, VertexMetadata(prior, false))
     ))
+    val graph = PageRankGraph(
+      numVertices,
+      edges.persist(StorageLevel.MEMORY_ONLY),
+      vertices.persist(StorageLevel.MEMORY_ONLY)
+    )
 
     PageRankApp.runFromInputs(
       options,
       sc,
-      stats,
-      edges,
-      vertices,
+      graph,
       priorsOpt = None
     )
   }

@@ -45,12 +45,17 @@ object PageRankApp extends SparkApp {
 
     sc.setCheckpointDir(s"${options.output}__checkpoints")
 
+    val graph = PageRankGraph.load(
+      sc,
+      options.input,
+      edgesStorageLevel = StorageLevel.MEMORY_AND_DISK_2,
+      verticesStorageLevel = StorageLevel.MEMORY_AND_DISK_2
+    )
+
     runFromInputs(
       options,
       sc,
-      sc.textFile(s"${options.input}/stats").collect(),
-      sc.objectFile[OutEdgePair](s"${options.input}/edges"),
-      sc.objectFile[RichVertexPair](s"${options.input}/vertices"),
+      graph,
       options.priorsOpt.map(x => sc.objectFile[Vertex](s"$x"))
     )
   }
@@ -61,22 +66,21 @@ object PageRankApp extends SparkApp {
   private[pagerank] def runFromInputs(
       options: Options,
       sc: SparkContext,
-      stats: Seq[String],
-      edges: OutEdgePairRDD,
-      vertices: RichVertexPairRDD,
+      inputGraph: PageRankGraph,
       priorsOpt: Option[VertexRDD]): Unit = {
 
-    val verticesForGraph = priorsOpt match {
-      case None => vertices
-      case Some(priors) => replaceValuesWithPriors(vertices, priors)
+    // replace priors, if another vector was supplied
+    val graph = priorsOpt match {
+      case None => inputGraph
+      case Some(priors) => {
+        val newVertices = replaceValuesWithPriors(inputGraph.vertices, priors)
+        PageRankGraph(
+          inputGraph.numVertices,
+          inputGraph.edges,
+          newVertices.persist(inputGraph.vertices.getStorageLevel)
+        )
+      }
     }
-
-    // reassemble the PageRankGraph from it's constituent components
-    val graph = PageRankGraph(
-      extractStatistic(stats, "numVertices")(_.toLong),
-      edges.persist(StorageLevel.MEMORY_AND_DISK_2),
-      verticesForGraph.persist(StorageLevel.MEMORY_AND_DISK_2)
-    )
 
     PageRank.run(
       graph,

@@ -9,6 +9,40 @@ class PageRankGraphTest
   with GraphTesting
   with SparkTesting {
 
+  test("save and load graph") {
+    val edges = Seq[OutEdgePair](
+      // node 1 is dangling
+      (2, OutEdge(1, 1.0)),
+      (3, OutEdge(1, 1.0)),
+      (4, OutEdge(2, 1.0)),
+      (4, OutEdge(3, 1.0)),
+      (5, OutEdge(3, 1.0)),
+      (5, OutEdge(4, 1.0))
+    )
+    val vertices = Seq[RichVertexPair](
+      (1, VertexMetadata(0.1, true)),
+      (2, VertexMetadata(0.2, false)),
+      (3, VertexMetadata(0.3, false)),
+      (4, VertexMetadata(0.4, false)),
+      (5, VertexMetadata(0.5, false))
+    )
+    val graph = PageRankGraph(
+      numVertices = vertices.size,
+      edges = sc.parallelize(edges),
+      vertices = sc.parallelize(vertices)
+    )
+
+    val path = "target/test/PageRankGraphTest"
+    PageRankGraph.save(graph, path)
+
+    val loadedGraph = PageRankGraph.load(sc, path, StorageLevel.NONE, StorageLevel.NONE)
+
+    // compare components
+    loadedGraph.numVertices shouldBe graph.numVertices
+    loadedGraph.edges.collect() shouldBe edges
+    loadedGraph.vertices.collect() shouldBe vertices
+  }
+
   test("uniform priors from edges, without dangle") {
     val input = Seq(
       (1, 5, 1.0),
