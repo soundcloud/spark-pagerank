@@ -151,7 +151,7 @@ class PageRankTest
     convergenceThreshold: Option[Double]): Unit = {
 
     val edges = GraphUtils.normalizeOutEdgeWeights(input).persist(StorageLevel.MEMORY_ONLY)
-    val graph = PageRankGraph.uniformPriorsFromEdges(
+    val graph = PageRankGraph.fromEdgesWithUniformPriors(
       edges,
       tmpStorageLevel = StorageLevel.MEMORY_ONLY,
       edgesStorageLevel = StorageLevel.MEMORY_ONLY,

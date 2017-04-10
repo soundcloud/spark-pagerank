@@ -9,6 +9,69 @@ class PageRankGraphTest
   with GraphTesting
   with SparkTesting {
 
+  test("update vertex values, exact same number of vertices, does not need normalization") {
+    val newGraph = simpleGraph.updateVertexValues(sc.parallelize(Seq(
+      Vertex(1, 0.01),
+      Vertex(2, 0.02),
+      Vertex(3, 0.02),
+      Vertex(4, 0.15),
+      Vertex(5, 0.80)
+    )))
+
+    newGraph.vertices.collect().sortBy(_._1) shouldBe Seq(
+      (1, VertexMetadata(0.01, true)),
+      (2, VertexMetadata(0.02, false)),
+      (3, VertexMetadata(0.02, false)),
+      (4, VertexMetadata(0.15, false)),
+      (5, VertexMetadata(0.80, false))
+    )
+  }
+
+  test("update vertex values, fewer vertices in graph, needs normalization") {
+    val vertices = Seq(
+      Vertex(1, 0.01),
+      Vertex(2, 0.02),
+      Vertex(3, 0.02),
+      Vertex(4, 0.15),
+      Vertex(5, 0.70),
+      Vertex(6, 0.10) // not in graph
+    )
+    val newGraph = simpleGraph.updateVertexValues(sc.parallelize(vertices))
+
+    val totalDelta = 0.10
+    val perNodeDelta = totalDelta / 5
+    val expectedValues = vertices.map(_.value + perNodeDelta)
+
+    val actualValues = newGraph.vertices.collect().sortBy(_._1).map(_._2.value)
+
+    actualValues.zip(expectedValues).foreach { case (actual, expected) =>
+      actual shouldBe (expected) +- EPS
+    }
+  }
+
+  test("update vertex values, more vertices in graph") {
+    val vertices = Seq(
+      Vertex(1, 0.01),
+      Vertex(2, 0.02),
+      Vertex(3, 0.02),
+      Vertex(4, 0.15)
+      // Vertex(5, 0.70) // in the graph, but not updated
+    )
+    val newGraph = simpleGraph.updateVertexValues(sc.parallelize(vertices))
+
+    // vertex 5 will have value 1.0/5 = 0.20
+    // sum of all new values is also 0.20
+    val totalDelta = 0.60
+    val perNodeDelta = totalDelta / 5
+    val expectedValues = vertices.map(_.value + perNodeDelta)
+
+    val actualValues = newGraph.vertices.collect().sortBy(_._1).map(_._2.value)
+
+    actualValues.zip(expectedValues).foreach { case (actual, expected) =>
+      actual shouldBe (expected) +- EPS
+    }
+  }
+
   test("save and load graph") {
     val edges = Seq[OutEdgePair](
       // node 1 is dangling
@@ -43,7 +106,7 @@ class PageRankGraphTest
     loadedGraph.vertices.collect() shouldBe vertices
   }
 
-  test("uniform priors from edges, without dangle") {
+  test("graph from edges with, uniform priors, without dangle") {
     val input = Seq(
       (1, 5, 1.0),
       (2, 1, 1.0),
@@ -61,19 +124,10 @@ class PageRankGraphTest
       (5, false)
     )
 
-    execTestUniformPriorsFromEdges(input, expectedVertices)
+    execTestFromEdgesWithUniformPriors(input, expectedVertices)
   }
 
-  test("uniform priors from edges, with dangle") {
-    val input = Seq(
-      // node 1 is dangling
-      (2, 1, 1.0),
-      (3, 1, 1.0),
-      (4, 2, 1.0),
-      (4, 3, 1.0),
-      (5, 3, 1.0),
-      (5, 4, 1.0)
-    )
+  test("graph from edges, with uniform priors, with dangle") {
     val expectedVertices = Seq(
       (1, true),
       (2, false),
@@ -82,14 +136,35 @@ class PageRankGraphTest
       (5, false)
     )
 
-    execTestUniformPriorsFromEdges(input, expectedVertices)
+    execTestFromEdgesWithUniformPriors(simpleEdges, expectedVertices)
   }
 
-  private def execTestUniformPriorsFromEdges(
+  private def simpleEdges: Seq[EdgeTuple] = {
+    Seq(
+      // node 1 is dangling
+      (2, 1, 1.0),
+      (3, 1, 1.0),
+      (4, 2, 1.0),
+      (4, 3, 1.0),
+      (5, 3, 1.0),
+      (5, 4, 1.0)
+    )
+  }
+
+  private def simpleGraph: PageRankGraph = {
+    PageRankGraph.fromEdgesWithUniformPriors(
+      simpleEdges,
+      tmpStorageLevel = StorageLevel.MEMORY_ONLY,
+      edgesStorageLevel = StorageLevel.MEMORY_ONLY,
+      verticesStorageLevel = StorageLevel.MEMORY_ONLY
+    )
+  }
+
+  private def execTestFromEdgesWithUniformPriors(
       input: Seq[EdgeTuple],
       expectedVertices: Seq[(Int, Boolean)]): Unit = {
 
-    val graph = PageRankGraph.uniformPriorsFromEdges(
+    val graph = PageRankGraph.fromEdgesWithUniformPriors(
       input,
       tmpStorageLevel = StorageLevel.MEMORY_ONLY,
       edgesStorageLevel = StorageLevel.MEMORY_ONLY,

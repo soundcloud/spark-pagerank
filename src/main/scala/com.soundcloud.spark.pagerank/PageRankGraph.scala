@@ -12,6 +12,41 @@ final case class PageRankGraph(
   // anything that requires computation should not be done in this constructor
   //   to allow the caller to control when and even if it happens
   require(numVertices >= 2, "Number of vertices must be greater than or equal to 2")
+
+  /**
+   * Updates any of the vertex values for those provided. Not all values must be
+   * replaced, and any extra vertices from the input RDD will be discarded. This
+   * is useful for setting the priors from a previous run or iteration of
+   * PageRank. Since this can cause the vector values to no longer be
+   * normalized, this will re-normalize the values after updating them.
+   */
+  def updateVertexValues(newVertices: VertexRDD, eps: Value = EPS): PageRankGraph = {
+    // TODO(jd): if performance is a problem, we can cache this temporarily
+    val updatedVertices = this.vertices
+      .leftOuterJoin(newVertices.map(_.toPair))
+      .map { case (id, (meta, newValueOpt)) =>
+        (id, meta.withNewValue(newValueOpt.getOrElse(meta.value)))
+      }
+
+    def normalizedVertices: RichVertexPairRDD = {
+      val totalDelta = 1.0 - updatedVertices.map(_._2.value).sum()
+
+      // nothing to do, no normalization needed
+      if (math.abs(totalDelta) <= EPS)
+        return updatedVertices
+
+      val perNodeDelta = totalDelta / this.numVertices
+      updatedVertices
+        .map { case (id, meta) =>
+          (id, meta.withNewValue(meta.value + perNodeDelta))
+        }
+    }
+
+    val newGraph = PageRankGraph(numVertices, edges, normalizedVertices.persist(vertices.getStorageLevel))
+    this.vertices.unpersist()
+
+    newGraph
+  }
 }
 
 object PageRankGraph {
@@ -71,15 +106,17 @@ object PageRankGraph {
    * @param verticesStorageLevel the {{StorageLevel}} to use for the final
    *          vertices produced
    */
-  def uniformPriorsFromEdges(
+  def fromEdgesWithUniformPriors(
     edges: EdgeRDD,
     tmpStorageLevel: StorageLevel,
     edgesStorageLevel: StorageLevel,
     verticesStorageLevel: StorageLevel): PageRankGraph = {
 
+    // extract vertex ID sets from edges
     // extract the source and destination ID sets separately
-    val srcIds = edges.map(_.srcId).distinct.persist(tmpStorageLevel)
-    val dstIds = edges.map(_.dstId).distinct.persist(tmpStorageLevel)
+    var (srcIds, dstIds) = GraphUtils.unzipDistinct(edges)
+    srcIds = srcIds.persist(tmpStorageLevel)
+    dstIds = dstIds.persist(tmpStorageLevel)
 
     // determine the union set of all IDs
     val allIds = (srcIds ++ dstIds).distinct().persist(tmpStorageLevel)
@@ -89,15 +126,8 @@ object PageRankGraph {
     val prior = 1.0 / numVertices
     val vertices = allIds.map(id => (id, prior))
 
-    // determine which vertices are dangling
-    val srcIdPairs = srcIds.map(x => (x, 1))
-    val dstIdPairs = dstIds.map(x => (x, 1))
-    val dangles = srcIdPairs
-      .cogroup(dstIdPairs)
-      .map { case (id, vals) =>
-        val isDangling = (vals._1.size == 0 && vals._2.size == 1)
-        (id, isDangling)
-      }
+    // tag vertices with dangles
+    val dangles = GraphUtils.tagDanglingVertices(srcIds, dstIds)
 
     // unpersist the temporary datasets
     srcIds.unpersist()

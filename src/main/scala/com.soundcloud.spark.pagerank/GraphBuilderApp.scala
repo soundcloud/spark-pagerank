@@ -57,7 +57,7 @@ object GraphBuilderApp extends SparkApp {
     // build PageRank graph
     // don't persist since we just save straight to HDFS
     // TODO(jd): change that when we add running validation and statistics
-    val graph = PageRankGraph.uniformPriorsFromEdges(
+    val graph = PageRankGraph.fromEdgesWithUniformPriors(
       edges,
       tmpStorageLevel = StorageLevel.MEMORY_ONLY_2,
       edgesStorageLevel = StorageLevel.NONE,

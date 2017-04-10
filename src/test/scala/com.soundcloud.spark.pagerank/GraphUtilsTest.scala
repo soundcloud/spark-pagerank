@@ -8,6 +8,64 @@ class GraphUtilsTest
   with GraphTesting
   with SparkTesting {
 
+  test("unzip distinct") {
+    val edges = Seq(
+      (1, 2, 1.0),
+      (3, 2, 1.0),
+      (2, 1, 1.0),
+      (2, 3, 1.0)
+    )
+
+    val (srcIds, dstIds) = GraphUtils.unzipDistinct(edges)
+    srcIds.collect().sorted shouldBe Seq(1, 2, 3)
+    dstIds.collect().sorted shouldBe Seq(1, 2, 3)
+  }
+
+  test("tag dangling vertices") {
+    execTestTagDanglingVertices(
+      Seq(1, 2, 3),
+      Seq(1, 2, 3),
+      Seq(
+        (1, false),
+        (2, false),
+        (3, false)
+      )
+    )
+
+    execTestTagDanglingVertices(
+      Seq(2, 3),
+      Seq(1, 2, 3),
+      Seq(
+        (1, true),
+        (2, false),
+        (3, false)
+      )
+    )
+
+    execTestTagDanglingVertices(
+      Seq(1, 2, 3),
+      Seq(2, 3),
+      Seq(
+        (1, false),
+        (2, false),
+        (3, false)
+      )
+    )
+
+    execTestTagDanglingVertices(
+      Seq(2, 3, 5, 6),
+      Seq(1, 2, 3, 4, 5),
+      Seq(
+        (1, true),
+        (2, false),
+        (3, false),
+        (4, true),
+        (5, false),
+        (6, false)
+      )
+    )
+  }
+
   test("count dangling vertices") {
     val fixtures = Seq(
       (
@@ -191,5 +249,10 @@ class GraphUtilsTest
       val actual = edgeSeqToTupleSeq(rdd.collect())
       actual.sorted shouldBe expected.sorted
     }
+  }
+
+  private def execTestTagDanglingVertices(srcIds: Seq[Id], dstIds: Seq[Id], expected: Seq[(Id, Boolean)]): Unit = {
+    val actual = GraphUtils.tagDanglingVertices(sc.parallelize(srcIds), sc.parallelize(dstIds))
+    actual.collect().sortBy(_._1) shouldBe expected
   }
 }

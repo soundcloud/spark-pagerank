@@ -8,6 +8,35 @@ import org.apache.spark.rdd.RDD
 object GraphUtils {
 
   /**
+   * Given the edges of a graph, this unzips the source and destination vertex
+   * IDs. ID's in the resulting RDDs are distinct.
+   */
+  def unzipDistinct(edges: EdgeRDD): (RDD[Id], RDD[Id]) = {
+    def extract(fn: (Edge) => Id): RDD[Id] =
+      edges.map(fn).distinct
+
+    (extract(_.srcId), extract(_.dstId))
+  }
+
+  /**
+   * Given an RDD of source vertex IDs and an RDD of destination vertex IDs
+   * (from edges), tag vertex IDs with a flag to indicate if the vertex is
+   * dangling (no out edges) or not.
+   */
+  def tagDanglingVertices(srcIds: RDD[Id], dstIds: RDD[Id]): RDD[(Id, Boolean)] = {
+    // determine which vertices are dangling
+    val srcIdPairs = srcIds.map(x => (x, 1))
+    val dstIdPairs = dstIds.map(x => (x, 1))
+
+    srcIdPairs
+      .cogroup(dstIdPairs)
+      .map { case (id, vals) =>
+        val isDangling = (vals._1.size == 0 && vals._2.size == 1)
+        (id, isDangling)
+      }
+  }
+
+  /**
    * Counts the number of vertices with no out edges. These are considered as
    * "dangling" vertices.
    *
@@ -19,15 +48,8 @@ object GraphUtils {
    * persisting it first.
    */
   def countDanglingVertices(edges: EdgeRDD): Long = {
-    val a = edges.map(_.srcId).distinct.map(x => (x, 1))
-    val b = edges.map(_.dstId).distinct.map(x => (x, 1))
-
-    a
-      .cogroup(b)
-      .filter { case (_, vals) =>
-        (vals._1.size == 0 && vals._2.size == 1)
-      }.
-      count()
+    val (srcIds, dstIds) = unzipDistinct(edges)
+    tagDanglingVertices(srcIds, dstIds).filter(_._2).count()
   }
 
   /**
@@ -45,14 +67,14 @@ object GraphUtils {
    * Determines if the vertices of a graph are normalized. Assumes a graph with
    * `Double` vertex attributes.
    */
-  def areVerticesNormalized[T](vertices: VertexRDD, eps: Double = EPS): Boolean =
+  def areVerticesNormalized[T](vertices: VertexRDD, eps: Value = EPS): Boolean =
     math.abs(1.0 - vertices.map(_.value).sum()) <= eps
 
   /**
    * Counts the number of vertices that do not have edges that sum to 1.0.
    * Assumes edges with `Double` weights.
    */
-  def countVerticesWithoutNormalizedOutEdges(edges: EdgeRDD, eps: Double = EPS): Long = {
+  def countVerticesWithoutNormalizedOutEdges(edges: EdgeRDD, eps: Value = EPS): Long = {
     edges
       .map(edge => (edge.srcId, edge.weight))
       .reduceByKey(_ + _)

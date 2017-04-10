@@ -10,6 +10,7 @@ package object pagerank {
   type VertexRDD = RDD[Vertex]
 
   type OutEdgePair = (Id, OutEdge)
+  type VertexPair = (Id, Value)
   type RichVertexPair = (Id, VertexMetadata)
 
   type OutEdgePairRDD = RDD[OutEdgePair]
@@ -17,10 +18,12 @@ package object pagerank {
 
   final case class Edge(srcId: Id, dstId: Id, weight: Value) {
     def isSelfReferencing: Boolean = srcId == dstId
-    def toOutEdgePair(): OutEdgePair = (srcId, OutEdge(dstId, weight))
+    def toOutEdgePair: OutEdgePair = (srcId, OutEdge(dstId, weight))
   }
 
-  final case class Vertex(id: Id, value: Value)
+  final case class Vertex(id: Id, value: Value) {
+    def toPair: VertexPair = (id, value)
+  }
 
   final case class OutEdge(dstId: Id, weight: Value)
 
@@ -33,5 +36,5 @@ package object pagerank {
       VertexMetadata(newValue, isDangling)
   }
 
-  val EPS: Double = 1.0E-15 // machine epsilon: http://en.wikipedia.org/wiki/Machine_epsilon
+  val EPS: Value = 1.0E-15 // machine epsilon: http://en.wikipedia.org/wiki/Machine_epsilon
 }

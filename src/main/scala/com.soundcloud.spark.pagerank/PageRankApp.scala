@@ -16,7 +16,7 @@ object PageRankApp extends SparkApp {
     @ArgOption(name = "--output", usage = "Output directory for the final PageRank vertices", required = true)
     var output: String = _
 
-    @ArgOption(name = "--priors", usage = "Directory with priors to use, allowing PageRank to continue iterating after stopping, requiring the identical graph that was used to produce the priors")
+    @ArgOption(name = "--priors", usage = "Directory with priors to use, allowing PageRank to continue iterating after stopping or starting off a new run from previous execution potentially with different vertices")
     var priors: String = _
 
     @ArgOption(name = "--teleportProb", usage = "PageRank: probability of a random jump in the graph")
@@ -72,14 +72,7 @@ object PageRankApp extends SparkApp {
     // replace priors, if another vector was supplied
     val graph = priorsOpt match {
       case None => inputGraph
-      case Some(priors) => {
-        val newVertices = replaceValuesWithPriors(inputGraph.vertices, priors)
-        PageRankGraph(
-          inputGraph.numVertices,
-          inputGraph.edges,
-          newVertices.persist(inputGraph.vertices.getStorageLevel)
-        )
-      }
+      case Some(priors) => inputGraph.updateVertexValues(priors)
     }
 
     PageRank.run(
@@ -89,15 +82,6 @@ object PageRankApp extends SparkApp {
       convergenceThresholdOpt = options.convergenceThresholdOpt
     )
     .saveAsObjectFile(options.output)
-  }
-
-  private[pagerank] def replaceValuesWithPriors(vertices: RichVertexPairRDD, priors: VertexRDD): RichVertexPairRDD = {
-    val priorsPairs = priors.map(x => (x.id, x.value))
-    vertices
-      .join(priorsPairs)
-      .map { case (id, (vMeta, prior)) =>
-        (id, vMeta.withNewValue(prior))
-      }
   }
 
   private[pagerank] def extractStatistic[T](stats: Seq[String], key: String)(parse: (String) => T): T = {
