@@ -275,7 +275,6 @@ class GraphUtilsTest
     val errorsOpt = GraphUtils.validateStructure(Seq(Edge(1, 1, 1.0)), Seq(Vertex(1, 1.0)))
     errorsOpt.isEmpty shouldBe false
     val errors = errorsOpt.get
-    println(errors.mkString("\n"))
     errors.size shouldBe 1
     errors.head.contains("self-referencing") shouldBe true
   }
@@ -284,7 +283,6 @@ class GraphUtilsTest
     val errorsOpt = GraphUtils.validateStructure(Seq(Edge(1, 1, 1.0)), Seq.empty[Vertex])
     errorsOpt.isEmpty shouldBe false
     val errors = errorsOpt.get
-    println(errors.mkString("\n"))
     errors.size shouldBe 2
     errors(0).contains("self-referencing") shouldBe true
     errors(1).contains("values must be normalized") shouldBe true
