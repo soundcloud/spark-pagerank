@@ -19,8 +19,8 @@ object GraphBuilderApp extends SparkApp {
     // @Option(name = "--computeExtraGraphStats", usage = "Compute and save extra graph statistics")
     // var extractGraphStats: Boolean = false
 
-    @Option(name = "--validateGraph", usage = "Validate the structural properties of the graph, according to the requirements of PageRank, printing any errors to stdout")
-    var validateGraph: Boolean = false
+    @Option(name = "--validateGraphStructure", usage = "Validate the structural properties of the graph, according to the requirements of PageRank, printing any errors to stdout")
+    var validateGraphStructure: Boolean = false
 
     @Option(name = "--numPartitions", usage = "Number of partitions to use at work time and for the resulting output")
     var numPartitions: Int = 4000
@@ -66,7 +66,7 @@ object GraphBuilderApp extends SparkApp {
     // TODO(jd): does not exist yet
 
     // run graph validation (optional)
-    if (options.validateGraph) {
+    if (options.validateGraphStructure) {
       graph.validateStructure().foreach { errors =>
         println(errors.mkString("\n"))
       }
