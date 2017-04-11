@@ -72,6 +72,27 @@ class PageRankGraphTest
     }
   }
 
+  test("validate structure") {
+    // this just needs to test converstion to plain graph parts,
+    // the rest is tested in GraphUtilsTest
+
+    // no problems
+    simpleGraph.validateStructure() shouldBe None
+
+    // just one problem, non-normalized edges
+    val nonNormalizedGraph = PageRankGraph.fromEdgesWithUniformPriors(
+      simpleEdges,
+      tmpStorageLevel = StorageLevel.NONE,
+      edgesStorageLevel = StorageLevel.NONE,
+      verticesStorageLevel = StorageLevel.NONE
+    )
+    val errorsOpt = nonNormalizedGraph.validateStructure()
+    errorsOpt.isEmpty shouldBe false
+    val errors = errorsOpt.get
+    errors.size shouldBe 1
+    errors.head.contains("normalized") shouldBe true
+  }
+
   test("save and load graph") {
     val edges = Seq[OutEdgePair](
       // node 1 is dangling
@@ -153,7 +174,7 @@ class PageRankGraphTest
 
   private def simpleGraph: PageRankGraph = {
     PageRankGraph.fromEdgesWithUniformPriors(
-      simpleEdges,
+      GraphUtils.normalizeOutEdgeWeights(simpleEdges),
       tmpStorageLevel = StorageLevel.MEMORY_ONLY,
       edgesStorageLevel = StorageLevel.MEMORY_ONLY,
       verticesStorageLevel = StorageLevel.MEMORY_ONLY

@@ -251,6 +251,30 @@ class GraphUtilsTest
     }
   }
 
+  test("validate graph structure; no errors") {
+    val errorsOpt = GraphUtils.validateStructure(Seq(Edge(1, 2, 1.0)), Seq(Vertex(1, 1.0)))
+    errorsOpt.isEmpty shouldBe true
+  }
+
+  test("validate graph structure; one error") {
+    val errorsOpt = GraphUtils.validateStructure(Seq(Edge(1, 1, 1.0)), Seq(Vertex(1, 1.0)))
+    errorsOpt.isEmpty shouldBe false
+    val errors = errorsOpt.get
+    println(errors.mkString("\n"))
+    errors.size shouldBe 1
+    errors.head.contains("self-referencing") shouldBe true
+  }
+
+  test("validate graph structure; two errors") {
+    val errorsOpt = GraphUtils.validateStructure(Seq(Edge(1, 1, 1.0)), Seq.empty[Vertex])
+    errorsOpt.isEmpty shouldBe false
+    val errors = errorsOpt.get
+    println(errors.mkString("\n"))
+    errors.size shouldBe 2
+    errors(0).contains("self-referencing") shouldBe true
+    errors(1).contains("values must be normalized") shouldBe true
+  }
+
   private def execTestTagDanglingVertices(srcIds: Seq[Id], dstIds: Seq[Id], expected: Seq[(Id, Boolean)]): Unit = {
     val actual = GraphUtils.tagDanglingVertices(sc.parallelize(srcIds), sc.parallelize(dstIds))
     actual.collect().sortBy(_._1) shouldBe expected

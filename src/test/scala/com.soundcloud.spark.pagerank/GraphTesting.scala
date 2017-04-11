@@ -32,4 +32,7 @@ trait GraphTesting {
 
   implicit def tupleSeqToRDD(tuples: Seq[EdgeTuple]): EdgeRDD =
     edgeSeqToRDD(tupleSeqToEdgeSeq(tuples))
+
+  implicit def vertexSeqToRDD(vertices: Seq[Vertex]): VertexRDD =
+    sc.parallelize(vertices)
 }

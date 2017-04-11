@@ -47,6 +47,22 @@ final case class PageRankGraph(
 
     newGraph
   }
+
+  /**
+   * Validates the structure of the graph, to ensure it is compliant with the
+   * requirements for PageRank. See {{GraphUtils#validateStructure}} for more
+   * details, including performance considerations.
+   */
+  def validateStructure(eps: Value = EPS): Option[Seq[String]] = {
+    val edges = this.edges.map { case (srcId, e) =>
+      Edge(srcId, e.dstId, e.weight)
+    }
+    val vertices = this.vertices.map { case (id, meta) =>
+      Vertex(id, meta.value)
+    }
+
+    GraphUtils.validateStructure(edges, vertices, eps)
+  }
 }
 
 object PageRankGraph {

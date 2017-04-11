@@ -16,11 +16,11 @@ object GraphBuilderApp extends SparkApp {
     @Option(name = "--output", usage = "Root output directory for the built graph (edges and vertices)", required = true)
     var output: String = _
 
-    @Option(name = "--computeExtraGraphStats", usage = "Compute and save extra graph statistics")
-    var extractGraphStats: Boolean = false
+    // @Option(name = "--computeExtraGraphStats", usage = "Compute and save extra graph statistics")
+    // var extractGraphStats: Boolean = false
 
-    @Option(name = "--validateGraph", usage = "Validate the structural properties of the graph")
-    var validateGaph: Boolean = false
+    @Option(name = "--validateGraph", usage = "Validate the structural properties of the graph, according to the requirements of PageRank, printing any errors to stdout")
+    var validateGraph: Boolean = false
 
     @Option(name = "--numPartitions", usage = "Number of partitions to use at work time and for the resulting output")
     var numPartitions: Int = 4000
@@ -51,17 +51,12 @@ object GraphBuilderApp extends SparkApp {
     // unpersist temporary datasets
     weightedEdges.unpersist()
 
-    // validate normalized edges are within some tolerance
-    // TODO(jd): this function does not exist yet
-
     // build PageRank graph
-    // don't persist since we just save straight to HDFS
-    // TODO(jd): change that when we add running validation and statistics
     val graph = PageRankGraph.fromEdgesWithUniformPriors(
       edges,
       tmpStorageLevel = StorageLevel.MEMORY_ONLY_2,
-      edgesStorageLevel = StorageLevel.NONE,
-      verticesStorageLevel = StorageLevel.NONE
+      edgesStorageLevel = StorageLevel.MEMORY_AND_DISK,
+      verticesStorageLevel = StorageLevel.MEMORY_AND_DISK
     )
 
     // save graph
@@ -71,7 +66,11 @@ object GraphBuilderApp extends SparkApp {
     // TODO(jd): does not exist yet
 
     // run graph validation (optional)
-    // TODO(jd): does not exist yet
+    if (options.validateGraph) {
+      graph.validateStructure().foreach { errors =>
+        println(errors.mkString("\n"))
+      }
+    }
   }
 
   private[pagerank] def parseEdge(str: String): Edge = {

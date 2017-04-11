@@ -1,5 +1,7 @@
 package com.soundcloud.spark.pagerank
 
+import scala.collection.mutable.ListBuffer
+
 import org.apache.spark.rdd.RDD
 
 /**
@@ -103,5 +105,32 @@ object GraphUtils {
       .map { case (srcId, (outEdge, weightSum)) =>
         Edge(srcId, outEdge.dstId, outEdge.weight / weightSum)
       }
+  }
+
+  /**
+   * Validates the structure of the input PageRank graph, according to the
+   * requirements to run PageRank. Returns a list of validation errors, if any.
+   *
+   * Performance note: `edges` are iterated over three times, and `vertices`
+   * once, so please consider persisting either or both before running this.
+   */
+  def validateStructure(edges: EdgeRDD, vertices: VertexRDD, eps: Value = EPS): Option[Seq[String]] = {
+    val errors = ListBuffer.empty[String]
+
+    val numSelfReferences = countSelfReferences(edges)
+    if (numSelfReferences != 0)
+      errors.append(s"Number of vertices with self-referencing edges must be 0, but was $numSelfReferences")
+
+    if (!areVerticesNormalized(vertices, eps))
+      errors.append("Input vertices values must be normalized")
+
+    val numVerticesWithoutNormalizedOutEdges = countVerticesWithoutNormalizedOutEdges(edges)
+    if (numVerticesWithoutNormalizedOutEdges != 0)
+      errors.append(s"Number of vertices without normalized out edges must be 0, but was $numVerticesWithoutNormalizedOutEdges")
+
+    if (errors.isEmpty)
+      None
+    else
+      Some(errors.toSeq)
   }
 }
