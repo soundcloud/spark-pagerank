@@ -158,6 +158,21 @@ class GraphUtilsTest
     }
   }
 
+  test("remove self-references") {
+    val input = Seq(
+      Edge(1, 2, 1.0),
+      Edge(1, 1, 1.0), // self-reference
+      Edge(2, 1, 1.0)
+    )
+    val expected = Seq(
+      Edge(1, 2, 1.0),
+      Edge(2, 1, 1.0)
+    )
+
+    GraphUtils.removeSelfReferences(input).collect() shouldBe expected
+    GraphUtils.removeSelfReferences(expected).collect() shouldBe expected // no change
+  }
+
   test("are vertices normalized") {
     val fixtures = Seq(
       (Seq(0.1, 0.3, 0.3, 0.1, 0.2), true),

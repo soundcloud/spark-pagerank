@@ -67,6 +67,13 @@ object GraphUtils {
   }
 
   /**
+   * Removes any edges that are self-referencing the same vertex. That is, any
+   * edges where the source and destination are the same.
+   */
+  def removeSelfReferences(edges: EdgeRDD): EdgeRDD =
+    edges.filter(e => e.srcId != e.dstId)
+
+  /**
    * Determines if the vertices of a graph are normalized. Assumes a graph with
    * `Double` vertex attributes.
    */
