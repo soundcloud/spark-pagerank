@@ -141,7 +141,6 @@ object PageRankGraph {
 
     // build the final dataset with the uniform prior and the dangle flags
     val prVertices = vertices
-      .map(v => (v._1, v._2))
       .join(dangles)
       .map { case(id, (value, isDangling)) =>
         (id, VertexMetadata(value, isDangling))

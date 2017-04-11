@@ -3,7 +3,8 @@ package com.soundcloud.spark.pagerank
 import org.apache.spark.rdd.RDD
 
 /**
- * Some general purpose graph operations and utilities.
+ * Some general purpose graph operations and utilities. Any operations specific
+ * to the complete PageRank graph will be in there and not here.
  */
 object GraphUtils {
 
