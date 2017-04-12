@@ -29,7 +29,7 @@ object PageRankApp extends SparkApp {
     var convergenceThreshold: Value = 0.0
 
     def priorsOpt: Option[String] = priors match {
-      case "" => None
+      case null => None
       case x => Some(x)
     }
 
