@@ -78,13 +78,14 @@ object PageRankApp extends SparkApp {
       verticesForGraph.persist(StorageLevel.MEMORY_AND_DISK_2)
     )
 
-    PageRank.run(
+    val solution = PageRank.run(
       graph,
       teleportProb = options.teleportProb,
       maxIterations = options.maxIterations,
       convergenceThresholdOpt = options.convergenceThresholdOpt
     )
-    .saveAsObjectFile(options.output)
+
+    solution.map(toTsv).saveAsObjectFile(options.output)
   }
 
   private[pagerank] def replaceValuesWithPriors(vertices: RichVertexPairRDD, priors: VertexRDD): RichVertexPairRDD = {
@@ -102,4 +103,7 @@ object PageRankApp extends SparkApp {
       case None => throw new IllegalArgumentException(s"Statistic not found with key: $key")
     }
   }
+
+  private[pagerank] def toTsv(v: Vertex): String =
+    s"${v.id}\t${v.value}"
 }
