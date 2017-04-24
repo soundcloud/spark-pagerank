@@ -44,4 +44,4 @@ To publish the artefact to the Sonatype/Maven Central repository, you need to ha
 
 ## Contact
 
-Please contact [Josh](mailto:josh@soundcloud.com) for more details, or with any questions or comments.
+Please contact [Josh Devins](mailto:josh@soundcloud.com) for more details, or with any questions or comments.
