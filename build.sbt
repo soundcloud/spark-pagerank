@@ -43,6 +43,8 @@ publishTo <<= version { v =>
     Some("releases" at nexus + "releases")
 }
 
+licenses += ("MIT", url("http://opensource.org/licenses/MIT"))
+
 // dependency plugin
 // docs: https://github.com/jrudolph/sbt-dependency-graph
 net.virtualvoid.sbt.graph.Plugin.graphSettings
