@@ -30,7 +30,7 @@ object GraphBuilderApp extends SparkApp {
     val options = new Options()
     new CmdLineParser(options).parseArgument(args: _*)
 
-    runFromInputs(options, sc, sc.textFile(options.input))
+    runFromInputs(options, sc, sc.textFile(options.input, minPartitions = options.numPartitions))
   }
 
   /**
@@ -41,7 +41,6 @@ object GraphBuilderApp extends SparkApp {
     // coalesce to smaller number of partitions
     // convert to internal edges data type
     val weightedEdges = input
-      .repartition(options.numPartitions)
       .map(parseEdge)
       .persist(StorageLevel.MEMORY_ONLY_2)
 
