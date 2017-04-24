@@ -36,6 +36,10 @@ Include it as a dependency in your sbt project:
 - Persist the edges and vertices of the graph with replicas: `StorageLevel.MEMORY_AND_DISK_2`
 - Enable Kryo serialization: `KryoSerialization.useKryo`
 
+## Publishing and Releasing
+
+To publish the artefact to the Sonatype/Maven Central repository, you need to have accounts, PGP keys and sbt plugins setup. Please follow the [sbt guideline](http://www.scala-sbt.org/release/docs/Using-Sonatype.html) for getting started. Once this is done, you can use the [sbt-release](https://github.com/sbt/sbt-release) plugin to perform releases.
+
 ## Contact
 
 Please contact [Josh](mailto:josh@soundcloud.com) for more details, or with any questions or comments.
