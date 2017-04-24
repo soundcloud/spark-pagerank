@@ -1,6 +1,4 @@
 .deps/
-.ivy2/
-.sbt/
 
 project/project/
 project/target/

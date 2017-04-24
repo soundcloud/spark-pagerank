@@ -1,3 +1,5 @@
+[![buildstatus](https://travis-ci.org/soundcloud/spark-pagerank.svg?branch=master)](https://travis-ci.org/soundcloud/spark-pagerank)
+
 # PageRank in Spark
 
 This is an implementation of PageRank in Spark, using Spark's standard RDD API.
