@@ -45,3 +45,9 @@ To publish the artefact to the Sonatype/Maven Central repository, you need to ha
 ## Contact
 
 Please contact [Josh Devins](mailto:josh@soundcloud.com) for more details, or with any questions or comments.
+
+## Copyright
+
+Copyright (c) 2017 [SoundCloud Ltd.](http://soundcloud.com).
+
+See the [LICENSE](LICENSE) file for details.
