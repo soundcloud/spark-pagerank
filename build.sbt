@@ -21,8 +21,8 @@ parallelExecution in Test := false
 
 // main dependencies
 libraryDependencies ++= Seq(
-  "args4j" % "args4j" % "2.0.29",
-  "org.apache.spark" %% "spark-core"   % "2.1.0" % "provided"
+  "args4j" % "args4j" % "2.0.29" % "optional",
+  "org.apache.spark" %% "spark-core" % "2.1.0" % "provided"
 )
 
 // test dependencies
@@ -51,19 +51,20 @@ licenses += ("MIT", url("http://opensource.org/licenses/MIT"))
 
 homepage := Some(url("https://github.com/soundcloud/spark-pagerank"))
 
-pomExtra := (
-  <scm>
-    <url>git@github.com:soundcloud/spark-pagerank.git</url>
-    <connection>scm:git@github.com:soundcloud/spark-pagerank.git</connection>
-  </scm>
-  <developers>
-    <developer>
-      <id>joshdevins</id>
-      <name>Josh Devins</name>
-      <url>http://www.joshdevins.com</url>
-      <email>hi@joshdevins.com</email>
-    </developer>
-  </developers>
+scmInfo := Some(
+  ScmInfo(
+    url("https://github.com/soundcloud/spark-pagerank"),
+    "scm:git@github.com:soundcloud/spark-pagerank.git"
+  )
+)
+
+developers := List(
+  Developer(
+    id    = "joshdevins",
+    name  = "Josh Devins",
+    email = "josh@soundcloud.com",
+    url   = url("http://joshdevins.com")
+  )
 )
 
 // dependency plugin

@@ -11,8 +11,16 @@ distclean:
 
 .PHONY: package
 package:
-	./sbt assembly
+	./sbt package
 
 .PHONY: test
 test:
-	./sbt test
+	./sbt ";+ test"
+
+.PHONY: publish
+publish:
+	./sbt ";+ publish"
+
+.PHONY: release
+release:
+	./sbt ";+ release"
