@@ -1,7 +1,7 @@
 package com.soundcloud.spark.pagerank
 
 import org.apache.spark.storage.StorageLevel
-import org.scalatest.{ FunSuite, Matchers }
+import org.scalatest.{ Matchers, FunSuite }
 
 class PageRankGraphTest
   extends FunSuite
@@ -10,7 +10,7 @@ class PageRankGraphTest
   with SparkTesting {
 
   test("update vertex values, exact same number of vertices, does not need normalization") {
-    val newGraph = simpleGraph.updateVertexValues(sc.parallelize(Seq(
+    val newGraph = simpleGraph.updateVertexValues(spark.sparkContext.parallelize(Seq(
       Vertex(1, 0.01),
       Vertex(2, 0.02),
       Vertex(3, 0.02),
@@ -36,7 +36,7 @@ class PageRankGraphTest
       Vertex(5, 0.70),
       Vertex(6, 0.10) // not in graph
     )
-    val newGraph = simpleGraph.updateVertexValues(sc.parallelize(vertices))
+    val newGraph = simpleGraph.updateVertexValues(spark.sparkContext.parallelize(vertices))
 
     val totalDelta = 0.10
     val perNodeDelta = totalDelta / 5
@@ -57,7 +57,7 @@ class PageRankGraphTest
       Vertex(4, 0.15)
       // Vertex(5, 0.70) // in the graph, but not updated
     )
-    val newGraph = simpleGraph.updateVertexValues(sc.parallelize(vertices))
+    val newGraph = simpleGraph.updateVertexValues(spark.sparkContext.parallelize(vertices))
 
     // vertex 5 will have value 1.0/5 = 0.20
     // sum of all new values is also 0.20
@@ -112,14 +112,14 @@ class PageRankGraphTest
     )
     val graph = PageRankGraph(
       numVertices = vertices.size,
-      edges = sc.parallelize(edges),
-      vertices = sc.parallelize(vertices)
+      edges = spark.sparkContext.parallelize(edges),
+      vertices = spark.sparkContext.parallelize(vertices)
     )
 
     val path = "target/test/PageRankGraphTest"
-    PageRankGraph.save(graph, path)
+    PageRankGraph.save(spark, graph, path)
 
-    val loadedGraph = PageRankGraph.load(sc, path, StorageLevel.NONE, StorageLevel.NONE)
+    val loadedGraph = PageRankGraph.load(spark, path, StorageLevel.NONE, StorageLevel.NONE)
 
     // compare components
     loadedGraph.numVertices shouldBe graph.numVertices

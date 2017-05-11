@@ -1,22 +1,23 @@
 package com.soundcloud.spark.pagerank
 
-import org.apache.spark.SparkContext
+import org.apache.spark.sql.SparkSession
 
 /**
  * A very basic way to manage untyped metadata as plain text on disk. This
  * allows for simple human inspection in a TSV and we don't need JSON or other.
  */
 object Metadata {
-  def save(sc: SparkContext, metadata: Seq[(String, Any)], path: String): Unit = {
+  def save(spark: SparkSession, metadata: Seq[(String, Any)], path: String): Unit = {
     val metaStrs = metadata.map { case (k, v) => s"$k,${v.toString}" }
-    sc
+    spark
+      .sparkContext
       .parallelize(metaStrs)
       .repartition(1)
       .saveAsTextFile(path)
   }
 
-  def load(sc: SparkContext, path: String): Seq[(String, String)] = {
-    sc.textFile(path).collect().map { x =>
+  def load(spark: SparkSession, path: String): Seq[(String, String)] = {
+    spark.sparkContext.textFile(path).collect().map { x =>
       val Array(k, v) = x.split(",")
       (k, v)
     }
@@ -29,6 +30,6 @@ object Metadata {
     }
   }
 
-  def loadAndExtract[T](sc: SparkContext, path: String, key: String)(parse: (String) => T): T =
-    extract(load(sc, path), key)(parse)
+  def loadAndExtract[T](spark: SparkSession, path: String, key: String)(parse: (String) => T): T =
+    extract(load(spark, path), key)(parse)
 }

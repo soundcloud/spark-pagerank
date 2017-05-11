@@ -1,6 +1,6 @@
 package com.soundcloud.spark.pagerank
 
-import org.scalatest.{ FunSuite, Matchers }
+import org.scalatest.{Matchers, FunSuite}
 
 class GraphUtilsTest
   extends FunSuite
@@ -183,7 +183,7 @@ class GraphUtilsTest
     )
 
     fixtures.foreach { case (input, expected) =>
-      val rdd = sc.parallelize(input.zipWithIndex.map(x => Vertex(x._2, x._1)))
+      val rdd = spark.sparkContext.parallelize(input.zipWithIndex.map(x => Vertex(x._2, x._1)))
       val actual = GraphUtils.areVerticesNormalized(rdd)
       actual shouldBe expected
     }
@@ -289,7 +289,7 @@ class GraphUtilsTest
   }
 
   private def execTestTagDanglingVertices(srcIds: Seq[Id], dstIds: Seq[Id], expected: Seq[(Id, Boolean)]): Unit = {
-    val actual = GraphUtils.tagDanglingVertices(sc.parallelize(srcIds), sc.parallelize(dstIds))
+    val actual = GraphUtils.tagDanglingVertices(spark.sparkContext.parallelize(srcIds), spark.sparkContext.parallelize(dstIds))
     actual.collect().sortBy(_._1) shouldBe expected
   }
 }

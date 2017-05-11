@@ -1,6 +1,6 @@
 package com.soundcloud.spark.pagerank
 
-import org.scalatest.{ FunSuite, Matchers }
+import org.scalatest.{ Matchers, FunSuite }
 
 class MetadataTest
   extends FunSuite
@@ -16,9 +16,9 @@ class MetadataTest
 
   test("save and load") {
     val path ="target/test/MetadataTest"
-    Metadata.save(sc, stats, path)
-    execTestExtractStatistic(Metadata.load(sc, path))
-    Metadata.loadAndExtract(sc, path, "integer")(_.toInt) shouldBe 1
+    Metadata.save(spark, stats, path)
+    execTestExtractStatistic(Metadata.load(spark, path))
+    Metadata.loadAndExtract(spark, path, "integer")(_.toInt) shouldBe 1
   }
 
   test("extract statistic") {

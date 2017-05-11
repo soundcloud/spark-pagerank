@@ -1,7 +1,7 @@
 package com.soundcloud.spark.pagerank
 
 import org.apache.spark.storage.StorageLevel
-import org.scalatest.{ FunSuite, Matchers }
+import org.scalatest.{Matchers, FunSuite}
 
 class PageRankAppTest
   extends FunSuite
@@ -18,7 +18,7 @@ class PageRankAppTest
     val prior = 1.0 / numVertices
     val stats = Seq(s"numVertices,$numVertices")
 
-    val edges = sc.parallelize(Seq[OutEdgePair](
+    val edges = spark.sparkContext.parallelize(Seq[OutEdgePair](
       // node 1 is dangling
       (2, OutEdge(1, 1.0)),
       (3, OutEdge(1, 1.0)),
@@ -27,7 +27,7 @@ class PageRankAppTest
       (5, OutEdge(3, 0.5)),
       (5, OutEdge(4, 0.5))
     ))
-    val vertices = sc.parallelize(Seq[RichVertexPair](
+    val vertices = spark.sparkContext.parallelize(Seq[RichVertexPair](
       (1, VertexMetadata(prior, true)),
       (2, VertexMetadata(prior, false)),
       (3, VertexMetadata(prior, false)),
@@ -42,7 +42,6 @@ class PageRankAppTest
 
     PageRankApp.runFromInputs(
       options,
-      sc,
       graph,
       priorsOpt = None
     )

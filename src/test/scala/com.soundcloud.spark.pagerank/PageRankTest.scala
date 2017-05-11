@@ -1,7 +1,7 @@
 package com.soundcloud.spark.pagerank
 
 import org.apache.spark.storage.StorageLevel
-import org.scalatest.{ FunSuite, Matchers }
+import org.scalatest.{Matchers, FunSuite}
 
 class PageRankTest
   extends FunSuite

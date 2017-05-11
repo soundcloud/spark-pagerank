@@ -1,6 +1,6 @@
 package com.soundcloud.spark.pagerank
 
-import org.apache.spark.SparkContext
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.storage.StorageLevel
 
 final case class PageRankGraph(
@@ -73,14 +73,14 @@ object PageRankGraph {
    * the samve binary version as Spark and this library that was used to save
    * it.
    */
-  def save(graph: PageRankGraph, path: String): Unit = {
+  def save(spark: SparkSession, graph: PageRankGraph, path: String): Unit = {
     // save graph components
     graph.edges.saveAsObjectFile(s"$path/edges")
     graph.vertices.saveAsObjectFile(s"$path/vertices")
 
     // save the necessary statistics
     Metadata.save(
-      graph.edges.context,
+      spark,
       Seq(("numVertices", graph.numVertices)),
       s"$path/stats"
     )
@@ -92,16 +92,16 @@ object PageRankGraph {
    * See: #save for more details
    */
   def load(
-    sc: SparkContext,
+    spark: SparkSession,
     path: String,
     edgesStorageLevel: StorageLevel,
     verticesStorageLevel: StorageLevel): PageRankGraph = {
 
-    val numVertices = Metadata.loadAndExtract(sc, s"$path/stats", "numVertices")(_.toLong)
+    val numVertices = Metadata.loadAndExtract(spark, s"$path/stats", "numVertices")(_.toLong)
     PageRankGraph(
       numVertices,
-      edges = sc.objectFile[OutEdgePair](s"$path/edges").persist(edgesStorageLevel),
-      vertices = sc.objectFile[RichVertexPair](s"$path/vertices").persist(verticesStorageLevel)
+      edges = spark.sparkContext.objectFile[OutEdgePair](s"$path/edges").persist(edgesStorageLevel),
+      vertices = spark.sparkContext.objectFile[RichVertexPair](s"$path/vertices").persist(verticesStorageLevel)
     )
   }
 

@@ -1,7 +1,7 @@
 package com.soundcloud.spark.pagerank
 
-import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.storage.StorageLevel
 import org.kohsuke.args4j.{ CmdLineParser, Option => ArgOption }
 
@@ -18,12 +18,12 @@ object ConvergenceCheckApp extends SparkApp {
     var inputB: String = _
   }
 
-  def run(args: Array[String], sc: SparkContext): Unit = {
+  def run(args: Array[String], spark: SparkSession): Unit = {
     val options = new Options()
     new CmdLineParser(options).parseArgument(args: _*)
 
-    val a = sc.objectFile[Vertex](s"${options.inputA}")
-    val b = sc.objectFile[Vertex](s"${options.inputB}")
+    val a = spark.sparkContext.objectFile[Vertex](s"${options.inputA}")
+    val b = spark.sparkContext.objectFile[Vertex](s"${options.inputB}")
 
     val delta = sumOfDifferences(a, b)
 

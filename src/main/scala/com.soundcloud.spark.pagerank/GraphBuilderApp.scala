@@ -1,7 +1,7 @@
 package com.soundcloud.spark.pagerank
 
-import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.storage.StorageLevel
 import org.kohsuke.args4j.{ CmdLineParser, Option }
 
@@ -16,9 +16,6 @@ object GraphBuilderApp extends SparkApp {
     @Option(name = "--output", usage = "Root output directory for the built graph (edges and vertices)", required = true)
     var output: String = _
 
-    // @Option(name = "--computeExtraGraphStats", usage = "Compute and save extra graph statistics")
-    // var extractGraphStats: Boolean = false
-
     @Option(name = "--validateGraphStructure", usage = "Validate the structural properties of the graph, according to the requirements of PageRank, printing any errors to stdout")
     var validateGraphStructure: Boolean = false
 
@@ -26,17 +23,17 @@ object GraphBuilderApp extends SparkApp {
     var numPartitions: Int = 4000
   }
 
-  def run(args: Array[String], sc: SparkContext): Unit = {
+  def run(args: Array[String], spark: SparkSession): Unit = {
     val options = new Options()
     new CmdLineParser(options).parseArgument(args: _*)
 
-    runFromInputs(options, sc, sc.textFile(options.input, minPartitions = options.numPartitions))
+    runFromInputs(options, spark, spark.sparkContext.textFile(options.input, minPartitions = options.numPartitions))
   }
 
   /**
    * An integration testable run interface.
    */
-  private[pagerank] def runFromInputs(options: Options, sc: SparkContext, input: RDD[String]): Unit = {
+  private[pagerank] def runFromInputs(options: Options, spark: SparkSession, input: RDD[String]): Unit = {
     // read TSV edges
     // coalesce to smaller number of partitions
     // convert to internal edges data type
@@ -59,7 +56,7 @@ object GraphBuilderApp extends SparkApp {
     )
 
     // save graph
-    PageRankGraph.save(graph, options.output)
+    PageRankGraph.save(spark, graph, options.output)
 
     // run additional graph statistics (optional)
     // TODO(jd): does not exist yet

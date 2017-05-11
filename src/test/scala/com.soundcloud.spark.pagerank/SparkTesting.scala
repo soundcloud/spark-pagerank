@@ -1,26 +1,27 @@
 package com.soundcloud.spark.pagerank
 
-import java.util.Properties
-
+import org.apache.spark.sql.SparkSession
 import org.scalatest.{ BeforeAndAfterAll, Suite }
-import org.apache.spark.{ SparkConf, SparkContext }
 
 trait SparkTesting extends BeforeAndAfterAll { self: Suite =>
-  var sc: SparkContext = _
+  var spark: SparkSession = _
 
   override def beforeAll() {
-    val conf = new SparkConf()
-      .setAppName("test")
-      .setMaster("local")
-      .set("spark.hadoop.validateOutputSpecs", "false")
-    sc = new SparkContext(conf)
-    sc.setCheckpointDir("target/test/checkpoints")
+    self.spark = SparkSession
+      .builder
+      .appName("test")
+      .master("local")
+      .config("spark.hadoop.validateOutputSpecs", "false")
+      .getOrCreate()
+
+    spark.sparkContext.setCheckpointDir("target/test/checkpoints")
 
     super.beforeAll()
   }
 
   override def afterAll() {
-    if (sc != null) sc.stop()
+    if (spark != null)
+      spark.stop()
 
     super.afterAll()
   }

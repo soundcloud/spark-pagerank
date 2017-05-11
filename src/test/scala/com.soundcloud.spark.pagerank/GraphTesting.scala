@@ -1,7 +1,6 @@
 package com.soundcloud.spark.pagerank
 
-import org.apache.spark.SparkContext
-import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.SparkSession
 
 /**
  * Functions for building graphs or parts of graphs from more basic components,
@@ -11,7 +10,7 @@ trait GraphTesting {
 
   type EdgeTuple = (Int, Int, Value)
 
-  def sc: SparkContext
+  def spark: SparkSession
 
   implicit def tupleToEdge(t: EdgeTuple): Edge = {
     val (srcId, dstId, weight) = t
@@ -28,11 +27,11 @@ trait GraphTesting {
     tuples.map(tupleToEdge)
 
   implicit def edgeSeqToRDD(edges: Seq[Edge]): EdgeRDD =
-    sc.parallelize(edges)
+    spark.sparkContext.parallelize(edges)
 
   implicit def tupleSeqToRDD(tuples: Seq[EdgeTuple]): EdgeRDD =
     edgeSeqToRDD(tupleSeqToEdgeSeq(tuples))
 
   implicit def vertexSeqToRDD(vertices: Seq[Vertex]): VertexRDD =
-    sc.parallelize(vertices)
+    spark.sparkContext.parallelize(vertices)
 }

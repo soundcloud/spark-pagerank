@@ -1,9 +1,8 @@
 package com.soundcloud.spark.pagerank
 
-import org.apache.spark.SparkContext
-import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.storage.StorageLevel
-import org.kohsuke.args4j.{ CmdLineParser, Option => ArgOption }
+import org.kohsuke.args4j.{CmdLineParser, Option => ArgOption}
 
 /**
  * Runs PageRank on the graph produced by {{GraphBuilderApp}}.
@@ -39,14 +38,14 @@ object PageRankApp extends SparkApp {
     }
   }
 
-  def run(args: Array[String], sc: SparkContext): Unit = {
+  def run(args: Array[String], spark: SparkSession): Unit = {
     val options = new Options()
     new CmdLineParser(options).parseArgument(args: _*)
 
-    sc.setCheckpointDir(s"${options.output}__checkpoints")
+    spark.sparkContext.setCheckpointDir(s"${options.output}__checkpoints")
 
     val graph = PageRankGraph.load(
-      sc,
+      spark,
       options.input,
       edgesStorageLevel = StorageLevel.MEMORY_AND_DISK_2,
       verticesStorageLevel = StorageLevel.MEMORY_AND_DISK_2
@@ -54,9 +53,8 @@ object PageRankApp extends SparkApp {
 
     runFromInputs(
       options,
-      sc,
       graph,
-      options.priorsOpt.map(x => sc.objectFile[Vertex](s"$x"))
+      options.priorsOpt.map(x => spark.sparkContext.objectFile[Vertex](s"$x"))
     )
   }
 
@@ -65,7 +63,6 @@ object PageRankApp extends SparkApp {
    */
   private[pagerank] def runFromInputs(
       options: Options,
-      sc: SparkContext,
       inputGraph: PageRankGraph,
       priorsOpt: Option[VertexRDD]): Unit = {
 

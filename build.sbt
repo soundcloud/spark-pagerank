@@ -22,12 +22,13 @@ parallelExecution in Test := false
 // main dependencies
 libraryDependencies ++= Seq(
   "args4j" % "args4j" % "2.0.29" % "optional",
-  "org.apache.spark" %% "spark-core" % "2.1.1" % "provided"
+  "org.apache.spark" %% "spark-core" % "2.1.1" % "provided",
+  "org.apache.spark" %% "spark-sql" % "2.1.1" % "provided"
 )
 
 // test dependencies
 libraryDependencies ++= Seq(
-  "org.scalatest"  %% "scalatest" % "2.2.4" % "test"
+  "org.scalatest" %% "scalatest" % "2.2.6" % "test"
 )
 
 // sbt-release settings

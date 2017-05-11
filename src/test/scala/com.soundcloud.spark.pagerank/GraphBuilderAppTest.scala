@@ -1,6 +1,6 @@
 package com.soundcloud.spark.pagerank
 
-import org.scalatest.{ FunSuite, Matchers }
+import org.scalatest.{Matchers, FunSuite}
 
 class GraphBuilderAppTest
   extends FunSuite
@@ -14,7 +14,7 @@ class GraphBuilderAppTest
     options.output = "target/test/GraphBuilderAppTest"
     options.numPartitions = 1
 
-    val input = sc.parallelize(Seq(
+    val input = spark.sparkContext.parallelize(Seq(
       (1, 5, 1.0),
       (2, 1, 1.0),
       (3, 1, 1.0),
@@ -24,6 +24,6 @@ class GraphBuilderAppTest
       (5, 4, 1.0)
     ).map(_.productIterator.toSeq.mkString("\t")))
 
-    GraphBuilderApp.runFromInputs(options, sc, input)
+    GraphBuilderApp.runFromInputs(options, spark, input)
   }
 }
