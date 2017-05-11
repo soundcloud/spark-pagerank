@@ -22,7 +22,7 @@ parallelExecution in Test := false
 // main dependencies
 libraryDependencies ++= Seq(
   "args4j" % "args4j" % "2.0.29" % "optional",
-  "org.apache.spark" %% "spark-core" % "2.1.0" % "provided"
+  "org.apache.spark" %% "spark-core" % "2.1.1" % "provided"
 )
 
 // test dependencies
