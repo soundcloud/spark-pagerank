@@ -3,33 +3,22 @@ package com.soundcloud.spark.pagerank
 import org.apache.spark.sql.SparkSession
 
 /**
- * A very basic way to manage untyped metadata as plain text on disk. This
- * allows for simple human inspection in a TSV and we don't need JSON or other.
+ * A representation of the superset of metadata about a PageRank graph.
+ */
+case class Metadata(numVertices: Long)
+
+/**
+ * A very basic way to manage typed metadata as JSON on disk. This allows for
+ * simple human inspection and easy reading/writing via Datasets.
  */
 object Metadata {
-  def save(spark: SparkSession, metadata: Seq[(String, Any)], path: String): Unit = {
-    val metaStrs = metadata.map { case (k, v) => s"$k,${v.toString}" }
-    spark
-      .sparkContext
-      .parallelize(metaStrs)
-      .repartition(1)
-      .saveAsTextFile(path)
+  def save(spark: SparkSession, metadata: Metadata, path: String): Unit = {
+    import spark.implicits._
+    Seq(metadata).toDS().write.json(path)
   }
 
-  def load(spark: SparkSession, path: String): Seq[(String, String)] = {
-    spark.sparkContext.textFile(path).collect().map { x =>
-      val Array(k, v) = x.split(",")
-      (k, v)
-    }
+  def load(spark: SparkSession, path: String): Metadata = {
+    import spark.implicits._
+    spark.read.json(path).as[Metadata].head()
   }
-
-  def extract[T](stats: Seq[(String, String)], key: String)(parse: (String) => T): T = {
-    stats.find(_._1 == key) match {
-      case Some(pair) => parse(pair._2)
-      case None => throw new IllegalArgumentException(s"Statistic not found with key: $key")
-    }
-  }
-
-  def loadAndExtract[T](spark: SparkSession, path: String, key: String)(parse: (String) => T): T =
-    extract(load(spark, path), key)(parse)
 }

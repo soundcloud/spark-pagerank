@@ -1,5 +1,6 @@
 package com.soundcloud.spark.pagerank
 
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.storage.StorageLevel
 
@@ -74,16 +75,14 @@ object PageRankGraph {
    * it.
    */
   def save(spark: SparkSession, graph: PageRankGraph, path: String): Unit = {
+    import spark.implicits._
+
     // save graph components
-    graph.edges.saveAsObjectFile(s"$path/edges")
-    graph.vertices.saveAsObjectFile(s"$path/vertices")
+    graph.edges.toDS().write.parquet(s"$path/edges")
+    graph.vertices.toDS().write.parquet(s"$path/vertices")
 
     // save the necessary statistics
-    Metadata.save(
-      spark,
-      Seq(("numVertices", graph.numVertices)),
-      s"$path/stats"
-    )
+    Metadata.save(spark, Metadata(graph.numVertices), s"$path/stats")
   }
 
   /**
@@ -97,11 +96,13 @@ object PageRankGraph {
     edgesStorageLevel: StorageLevel,
     verticesStorageLevel: StorageLevel): PageRankGraph = {
 
-    val numVertices = Metadata.loadAndExtract(spark, s"$path/stats", "numVertices")(_.toLong)
+    import spark.implicits._
+
+    val stats = Metadata.load(spark, s"$path/stats")
     PageRankGraph(
-      numVertices,
-      edges = spark.sparkContext.objectFile[OutEdgePair](s"$path/edges").persist(edgesStorageLevel),
-      vertices = spark.sparkContext.objectFile[RichVertexPair](s"$path/vertices").persist(verticesStorageLevel)
+      stats.numVertices,
+      edges = spark.read.parquet(s"$path/edges").as[OutEdgePair].rdd.persist(edgesStorageLevel),
+      vertices = spark.read.parquet(s"$path/vertices").as[RichVertexPair].rdd.persist(verticesStorageLevel)
     )
   }
 

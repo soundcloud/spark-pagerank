@@ -12,9 +12,10 @@ trait SparkTesting extends BeforeAndAfterAll { self: Suite =>
       .appName("test")
       .master("local")
       .config("spark.hadoop.validateOutputSpecs", "false")
+      .config("spark.sql.warehouse.dir", "target/test/spark/warehouse")
       .getOrCreate()
 
-    spark.sparkContext.setCheckpointDir("target/test/checkpoints")
+    spark.sparkContext.setCheckpointDir("target/test/spark/checkpoint")
 
     super.beforeAll()
   }

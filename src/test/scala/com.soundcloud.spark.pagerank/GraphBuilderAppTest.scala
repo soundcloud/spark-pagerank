@@ -1,17 +1,27 @@
 package com.soundcloud.spark.pagerank
 
-import org.scalatest.{Matchers, FunSuite}
+import java.io.File
+
+import org.apache.commons.io.FileUtils
+import org.scalatest.{ BeforeAndAfter, FunSuite, Matchers }
 
 class GraphBuilderAppTest
   extends FunSuite
+  with BeforeAndAfter
   with Matchers
   with GraphTesting
   with SparkTesting {
 
+  val path = "target/test/GraphBuilderAppTest"
+
+  before {
+    FileUtils.deleteDirectory(new File(path))
+  }
+
   // TODO(jd): design a better integration test as this just runs the app without assertions
   test("integration test") {
     val options = new GraphBuilderApp.Options()
-    options.output = "target/test/GraphBuilderAppTest"
+    options.output = path
     options.numPartitions = 1
 
     val input = spark.sparkContext.parallelize(Seq(

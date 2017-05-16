@@ -1,13 +1,23 @@
 package com.soundcloud.spark.pagerank
 
+import java.io.File
+
+import org.apache.commons.io.FileUtils
 import org.apache.spark.storage.StorageLevel
-import org.scalatest.{ Matchers, FunSuite }
+import org.scalatest.{ BeforeAndAfter, FunSuite, Matchers }
 
 class PageRankGraphTest
   extends FunSuite
+  with BeforeAndAfter
   with Matchers
   with GraphTesting
   with SparkTesting {
+
+  val path = "target/test/PageRankGraphTest"
+
+  before {
+    FileUtils.deleteDirectory(new File(path))
+  }
 
   test("update vertex values, exact same number of vertices, does not need normalization") {
     val newGraph = simpleGraph.updateVertexValues(spark.sparkContext.parallelize(Seq(
@@ -116,7 +126,6 @@ class PageRankGraphTest
       vertices = spark.sparkContext.parallelize(vertices)
     )
 
-    val path = "target/test/PageRankGraphTest"
     PageRankGraph.save(spark, graph, path)
 
     val loadedGraph = PageRankGraph.load(spark, path, StorageLevel.NONE, StorageLevel.NONE)

@@ -6,7 +6,8 @@ import org.apache.spark.storage.StorageLevel
 import org.kohsuke.args4j.{ CmdLineParser, Option }
 
 /**
- * Builds a PageRank graph from (non-normalized) weighted edges.
+ * Builds a PageRank graph from (non-normalized) weighted edges, saving the
+ * results in a Parquet file for next steps.
  */
 object GraphBuilderApp extends SparkApp {
   class Options {
