@@ -19,11 +19,16 @@ object ConvergenceCheckApp extends SparkApp {
   }
 
   def run(args: Array[String], spark: SparkSession): Unit = {
+    import spark.implicits._
+
+    def read(path: String): VertexRDD =
+      spark.read.parquet(path).as[Vertex].rdd
+
     val options = new Options()
     new CmdLineParser(options).parseArgument(args: _*)
 
-    val a = spark.sparkContext.objectFile[Vertex](s"${options.inputA}")
-    val b = spark.sparkContext.objectFile[Vertex](s"${options.inputB}")
+    val a = read(options.inputA)
+    val b = read(options.inputB)
 
     val delta = sumOfDifferences(a, b)
 

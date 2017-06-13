@@ -1,18 +1,28 @@
 package com.soundcloud.spark.pagerank
 
+import java.io.File
+
+import org.apache.commons.io.FileUtils
 import org.apache.spark.storage.StorageLevel
-import org.scalatest.{Matchers, FunSuite}
+import org.scalatest.{ BeforeAndAfter, Matchers, FunSuite }
 
 class PageRankAppTest
   extends FunSuite
+  with BeforeAndAfter
   with Matchers
   with GraphTesting
   with SparkTesting {
 
+  val path = "target/test/PageRankAppTest"
+
+  before {
+    FileUtils.deleteDirectory(new File(path))
+  }
+
   // TODO(jd): design a better integration test as this just runs the app without assertions
   test("integration test") {
     val options = new PageRankApp.Options()
-    options.output = "target/test/PageRankAppTest"
+    options.output = path
 
     val numVertices = 5
     val prior = 1.0 / numVertices
@@ -41,6 +51,7 @@ class PageRankAppTest
     )
 
     PageRankApp.runFromInputs(
+      spark,
       options,
       graph,
       priorsOpt = None

@@ -39,6 +39,8 @@ object PageRankApp extends SparkApp {
   }
 
   def run(args: Array[String], spark: SparkSession): Unit = {
+    import spark.implicits._
+
     val options = new Options()
     new CmdLineParser(options).parseArgument(args: _*)
 
@@ -52,9 +54,10 @@ object PageRankApp extends SparkApp {
     )
 
     runFromInputs(
+      spark,
       options,
       graph,
-      options.priorsOpt.map(x => spark.sparkContext.objectFile[Vertex](s"$x"))
+      options.priorsOpt.map(x => spark.read.parquet(x).as[Vertex].rdd)
     )
   }
 
@@ -62,9 +65,12 @@ object PageRankApp extends SparkApp {
    * An integration testable run interface.
    */
   private[pagerank] def runFromInputs(
+      spark: SparkSession,
       options: Options,
       inputGraph: PageRankGraph,
       priorsOpt: Option[VertexRDD]): Unit = {
+
+    import spark.implicits._
 
     // replace priors, if another vector was supplied
     val graph = priorsOpt match {
@@ -78,7 +84,9 @@ object PageRankApp extends SparkApp {
       maxIterations = options.maxIterations,
       convergenceThresholdOpt = options.convergenceThresholdOpt
     )
-    .saveAsObjectFile(options.output)
+    .toDS()
+    .write
+    .parquet(options.output)
   }
 
   private[pagerank] def extractStatistic[T](stats: Seq[String], key: String)(parse: (String) => T): T = {
