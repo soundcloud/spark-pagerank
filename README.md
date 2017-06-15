@@ -6,7 +6,7 @@ This is an implementation of PageRank in Spark, using Spark's standard RDD API.
 
 ## Performance
 
-We run this on one of our behaviour graphs which consists of approximately 650M vertices and 14B edges. Using the following Spark configuration, and in-memory persistence of edge and vertex RDDs, we obtain iteration times on the order of 3-5m each.
+We run this on one of our behaviour graphs which consists of approximately 700M vertices and 15B edges. Using the following Spark configuration, and in-memory persistence of edge and vertex RDDs, we obtain iteration times on the order of 3-5m each.
 
 Configuration example:
 
@@ -35,7 +35,7 @@ Include it as a dependency in your sbt project:
 
 ## Performance Tuning
 
-- Persist the edges and vertices of the graph with replicas: `StorageLevel.MEMORY_AND_DISK_2`
+- Persist the edges and vertices of the graph in memory and disk (as spill): `StorageLevel.MEMORY_AND_DISK`
 - Enable Kryo serialization: `KryoSerialization.useKryo`
 
 ## Contributing
