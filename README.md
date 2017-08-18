@@ -76,7 +76,7 @@ After a release to the staging repository, the [staging-to-release promotion pro
 
 ## Versioning
 
-This library aims to adhere to (Semantic Versioning 2.0.0)[http://semver.org/spec/v2.0.0.html]. Violations of this scheme should be reported as bugs. Specifically, if a minor or patch version is released that breaks backward compatibility, that version should be immediately removed and/or a new version should be immediately released that restores compatibility. Breaking changes to the public API will only be introduced with new major versions.
+This library aims to adhere to [Semantic Versioning 2.0.0](http://semver.org/spec/v2.0.0.html). Violations of this scheme should be reported as bugs. Specifically, if a minor or patch version is released that breaks backward compatibility, that version should be immediately removed and/or a new version should be immediately released that restores compatibility. Breaking changes to the public API will only be introduced with new major versions.
 
 ## Contributing
 
