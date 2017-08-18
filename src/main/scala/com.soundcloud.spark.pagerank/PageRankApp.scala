@@ -5,7 +5,8 @@ import org.apache.spark.storage.StorageLevel
 import org.kohsuke.args4j.{CmdLineParser, Option => ArgOption}
 
 /**
- * Runs PageRank on the graph produced by {{GraphBuilderApp}}.
+ * Runs PageRank on the graph produced using the functions in {{PageRankGraph}}
+ * or by using the {{GraphBuilderApp}}.
  */
 object PageRankApp extends SparkApp {
   class Options {

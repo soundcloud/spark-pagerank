@@ -7,7 +7,10 @@ import org.kohsuke.args4j.{ CmdLineParser, Option => ArgOption }
 
 /**
  * Compares two PageRank vectors and lets the user determine if there is
- * convergence.
+ * convergence by oututting the sum of the component-wise difference of the
+ * vectors. Note that this is an optional tool that is mostly used for
+ * debugging. If the user is concerned with iterating until convergence, the
+ * user can specify the convergence threshold at runtime to PageRank.
  */
 object ConvergenceCheckApp extends SparkApp {
   class Options {
