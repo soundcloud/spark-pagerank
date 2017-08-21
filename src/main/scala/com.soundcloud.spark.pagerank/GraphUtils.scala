@@ -95,7 +95,7 @@ object GraphUtils {
   }
 
   /**
-   * Normalizes outgoing edge weights of an {{EdgeRDD}}.
+   * Normalizes outgoing edge weights of an [[EdgeRDD]].
    *
    * Performance note: `edges` are iterated over twice, so please consider
    * persisting it first.

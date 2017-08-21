@@ -36,5 +36,9 @@ package object pagerank {
       VertexMetadata(newValue, isDangling)
   }
 
-  val EPS: Value = 1.0E-15 // machine epsilon: http://en.wikipedia.org/wiki/Machine_epsilon
+  /**
+   * [[http://en.wikipedia.org/wiki/Machine_epsilon Machine epsilon]] for
+   * controlling the precision of numerical comparisons.
+   */
+  val EPS: Value = 1.0E-15
 }

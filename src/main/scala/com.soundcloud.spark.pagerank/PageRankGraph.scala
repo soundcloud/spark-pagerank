@@ -88,7 +88,7 @@ object PageRankGraph {
   /**
    * Loads a graph from durable storage.
    *
-   * See: #save for more details
+   * See: [[save]] for more details
    */
   def load(
     spark: SparkSession,
@@ -114,14 +114,14 @@ object PageRankGraph {
    * Performance note: `edges` are iterated over multiple timed, so please
    * consider persisting it first.
    *
-   * @param edges the {{EdgeRDD}} to use as the basis for the graph
-   * @param tmpStorageLevel the {{StorageLevel}} to use for temporary datasets
-   *          that are created during the graph building process (we recommend
-   *          using `MEMORY_ONLY` as the datasets are small)
-   * @param edgesStorageLevel the {{StorageLevel}} to use for the final edges
+   * @param edges the [[EdgeRDD]] to use as the basis for the graph
+   * @param tmpStorageLevel the storage level to use for temporary datasets that
+   *          are created during the graph building process (we recommend using
+   *          `MEMORY_ONLY` as the datasets are small)
+   * @param edgesStorageLevel the storage level to use for the final edges
    *          produced
-   * @param verticesStorageLevel the {{StorageLevel}} to use for the final
-   *          vertices produced
+   * @param verticesStorageLevel the storage level to use for the final vertices
+   *          produced
    */
   def fromEdgesWithUniformPriors(
     edges: EdgeRDD,

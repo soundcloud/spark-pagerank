@@ -16,10 +16,10 @@ object PageRank {
    * Runs PageRank using Spark's RDD API.
    *
    * This implementation supports weighted edges and "dangling" vertices
-   * (no out edges). For performance considerations, the {{edges}} and
-   * {{vertices}} must already be cached (ideally in-memory) and this will be
-   * verified at runtime. The vertices will be unpersisted and persisted again
-   * at the same {{StorageLevel}} as they are mutated after each iteration.
+   * (no out edges). For performance considerations, the `edges` and `vertices`
+   * must already be cached (ideally in-memory) and this will be verified at
+   * runtime. The vertices will be unpersisted and persisted again at the same
+   * RDD storage level as they are mutated after each iteration.
    *
    * The structural requirements of the input graph are not enforced at runtime
    * but can be checking using supporting methods. To ensure a proper graph,
@@ -31,12 +31,12 @@ object PageRank {
    *  - Vertex values are normalized (i.e. sum to `1.0`)
    *  - Edge weights are normalized (i.e. outgoing edge values sum to `1.0`)
    *
-   * @param graph the prepared {{PageRankGraph}} to operate on
+   * @param graph the prepared [[PageRankGraph]] to operate on
    * @param teleportProb probability of a random jump in the graph
    * @param maxIterations a threshold on the maximum number of iterations,
    *          irrespective of convergence
    * @param convergenceThresholdOpt an optional threshold on the change between
-   *          iterations which marks convergence (NOTE: providing this will
+   *          iterations which marks convergence (Note: providing this will
    *          cause an extra computation after each iteration, so if performance
    *          is of concern, do not provide a value here)
    *
