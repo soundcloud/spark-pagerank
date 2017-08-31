@@ -14,7 +14,7 @@ This is an implementation of PageRank in Spark, using Spark's standard RDD API.
 - Various stopping criteria:
   - Number of iterations threshold
   - Convergence threshold (requires additional computation after each iteration)
-- Utilities for building, preparing and validating input graphs (incl. out-edge normalisation)
+- Utilities for building, preparing, and validating input graphs (incl. out-edge normalisation)
 
 ## Usage
 
