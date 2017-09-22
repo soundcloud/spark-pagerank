@@ -37,10 +37,11 @@ We include several built-in drivers that operate on plain-text TSV input of labe
 
 ## Performance
 
-We run this on one of our behaviour graphs which consists of approximately 700M vertices and 15B edges. Using the following Spark configuration, and in-memory persistence of edge and vertex RDDs, we obtain iteration times on the order of 3-5m each.
+We run this on one of our behaviour graphs which consists of approximately 700M vertices and 15B edges. Using the following Spark configuration, and in-memory persistence of edge and vertex RDDs, we obtain iteration times of between 3 to 5 minutes each.
 
 Configuration example:
 
+ - Spark 2.1.1
  - YARN
  - Dynamic allocation: no
  - Number of executors: 256
