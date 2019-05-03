@@ -1,7 +1,7 @@
 #!/bin/sh
 
-VERSION="0.13.8"
-REMOTE_TGZ="https://bintray.com/sbt/native-packages/download_file?file_path=sbt%2F${VERSION}%2Fsbt-${VERSION}.tgz"
+VERSION="0.13.16"
+REMOTE_TGZ="https://cocl.us/sbt-${VERSION}.tgz"
 
 SCRIPT_DIR=$(dirname "$0")
 SBT_DIR="$SCRIPT_DIR/.deps/build/sbt"

@@ -1,8 +1,8 @@
 language: scala
 sudo: false
 scala:
-   - 2.10.4
-   - 2.11.8
+   - 2.10.6
+   - 2.11.11
 cache:
   directories:
     - $HOME/.deps

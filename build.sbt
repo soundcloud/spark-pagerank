@@ -2,9 +2,9 @@ organization := "com.soundcloud"
 
 name := "spark-pagerank"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.11.11"
 
-crossScalaVersions := Seq("2.10.4", "2.11.8")
+crossScalaVersions := Seq("2.10.6", "2.11.11")
 
 publishMavenStyle := true
 
@@ -21,9 +21,9 @@ parallelExecution in Test := false
 
 // main dependencies
 libraryDependencies ++= Seq(
-  "args4j" % "args4j" % "2.0.29" % "optional",
-  "org.apache.spark" %% "spark-core" % "2.1.1" % "provided",
-  "org.apache.spark" %% "spark-sql" % "2.1.1" % "provided"
+  "args4j" % "args4j" % "2.0.31" % "optional",
+  "org.apache.spark" %% "spark-core" % "2.2.1" % "provided",
+  "org.apache.spark" %% "spark-sql" % "2.2.1" % "provided"
 )
 
 // test dependencies
