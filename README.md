@@ -83,9 +83,13 @@ This library aims to adhere to [Semantic Versioning 2.0.0](http://semver.org/spe
 
 We welcome contributions by [pull requests](https://github.com/soundcloud/spark-pagerank/pulls) and bug reports or feature requests as [issues](https://github.com/soundcloud/spark-pagerank/issues).
 
-## Contact
+## Authors
 
-Please contact [Josh Devins](mailto:josh@soundcloud.com) for more details, or with any questions or comments.
+* [Josh Devins](https://github.com/joshdevins)
+
+### Contributors
+
+* [Max Jakob](https://github.com/maxjakob)
 
 ## License
 
