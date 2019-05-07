@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Note: The version numnber here should always match what is in
-#       project/build.properties since that is what Travis CI uses.
+#       project/build.properties and travis.ymk since that is what Travis uses.
 VERSION="0.13.18"
 REMOTE_TGZ="https://piccolo.link/sbt-${VERSION}.tgz"
 
