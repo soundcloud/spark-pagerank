@@ -1,4 +1,4 @@
-all: package
+all: build
 
 .PHONY: clean
 clean:
@@ -6,8 +6,13 @@ clean:
 
 .PHONY: distclean
 distclean:
-	rm -rf .deps
-	rm -rf project/project project/target target
+	rm -rf \
+    .deps \
+    project/project project/target \
+    target
+
+.PHONY: build
+build: package
 
 .PHONY: package
 package:

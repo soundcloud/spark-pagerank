@@ -2,9 +2,9 @@ organization := "com.soundcloud"
 
 name := "spark-pagerank"
 
-scalaVersion := "2.11.11"
+scalaVersion := "2.11.12"
 
-crossScalaVersions := Seq("2.10.6", "2.11.11")
+crossScalaVersions := Seq("2.10.7", "2.11.12")
 
 publishMavenStyle := true
 
@@ -63,7 +63,7 @@ developers := List(
   Developer(
     id    = "joshdevins",
     name  = "Josh Devins",
-    email = "josh@soundcloud.com",
+    email = "hi@joshdevins.com",
     url   = url("http://joshdevins.com")
   )
 )
