@@ -8,13 +8,13 @@ This is an implementation of PageRank in Spark, using Spark's standard RDD API.
 
 - Fast iterations
 - Parameterised "teleport" probability
-- Weighted edges (out-edge weights must be normalised)
+- Weighted edges (out-edge weights must be normalized)
 - Supports "dangling" vertices (no out-edges from a node)
 - Supports arbitrary (e.g. non-uniform) priors (as vertex values)
 - Various stopping criteria:
   - Number of iterations threshold
   - Convergence threshold (requires additional computation after each iteration)
-- Utilities for building, preparing and validating input graphs (incl. out-edge normalisation)
+- Utilities for building, preparing, and validating input graphs (incl. out-edge normalization)
 
 ## Usage
 
@@ -23,21 +23,21 @@ Include it as a dependency in your sbt project:
 
 ### As A Library
 
-You can use this as a library and call it from within your own drivers. You will want to do this when you have some data preparation to do that does not conform with the built-in driver data interfaces.
+You can use PageRank in Spark as a library and call it from within your own drivers. You will want to do this when you have some data preparation to do that does not conform with the built-in driver data interfaces.
 
 More examples of usage as a library can be found in the source of the built-in drivers (see below).
 
 ### As Drivers
 
-We include several built-in drivers that operate on plain-text TSV input of labelled edges as a starting point. You will prepare the graph and run PageRank in the following sequence of drivers. Use `--help` to see the arguments and usage of each driver.
+We include several built-in drivers that operate on plain-text TSV input of labeled edges as a starting point. You will prepare the graph and run PageRank in the following sequence of drivers. Use `--help` to see the arguments and usage of each driver.
 
 1. `com.soundcloud.spark.pagerank.GraphBuilderApp`: Builds a PageRank graph from (non-normalized) weighted edges in TSV format (source, destination, weight), saving the resulting graph (edges and vertices) in Parquet files in preparation for next steps.
 1. `com.soundcloud.spark.pagerank.PageRankApp`: Runs PageRank on the graph produced using the functions in `PageRankGraph` or by using the `GraphBuilderApp`.
-1. `com.soundcloud.spark.pagerank.ConvergenceCheckApp`: Compares two PageRank vectors and lets the user determine if there is convergence by oututting the sum of the component-wise difference of the vectors. Note that this is an optional tool that is mostly used for debugging. If the user is concerned with iterating until convergence, the user can specify the convergence threshold at runtime to PageRank.
+1. `com.soundcloud.spark.pagerank.ConvergenceCheckApp`: Compares two PageRank vectors and lets the user determine if there is convergence by outputting the sum of the component-wise difference of the vectors. Note that this is an optional tool that is mostly used for debugging. If the user is concerned with iterating until convergence, the user can specify the convergence threshold at runtime to PageRank.
 
 ## Performance
 
-We run this on one of our behaviour graphs which consists of approximately 700M vertices and 15B edges. Using the following Spark configuration, and in-memory persistence of edge and vertex RDDs, we obtain iteration times of between 3 to 5 minutes each.
+We run this library on one of our behavior graphs which consists of approximately 700M vertices and 15B edges. Using the following Spark configuration, and in-memory persistence of edge and vertex RDDs, we obtain iteration times on the order of 3-5 minutes each.
 
 Configuration example:
 
@@ -55,7 +55,7 @@ Configuration example:
 
 ## Publishing and Releasing
 
-To publish an artefact to the Sonatype/Maven central repository (a snapshot or release), you need to have a Sonatype account, PGP keys and sbt plugins setup. Please follow the [sbt guideline](http://www.scala-sbt.org/release/docs/Using-Sonatype.html) for a complete getting started guide. Once this is done, you can use the [sbt-release](https://github.com/sbt/sbt-release) plugin via the `Makefile` to publish snapshots and perform releases.
+To publish an artifact to the Sonatype/Maven central repository (a snapshot or release), you need to have a Sonatype account, PGP keys and sbt plugins set up. Please follow the [sbt guideline](http://www.scala-sbt.org/release/docs/Using-Sonatype.html) for a complete guide to getting started. Once this is done, you can use the [sbt-release](https://github.com/sbt/sbt-release) plugin via the `Makefile` to publish snapshots and perform releases.
 
 ### Publishing Snapshots
 
@@ -67,13 +67,13 @@ make publish
 
 ### Performing a Release
 
-Once development of a version is complete, the artefact should be released to the central repository. This is a two stage process with the artefact first entering a staging repository, followed by a manual promotion process.
+Once development of a version is complete, the artifact should be released to the central repository. This is a two stage process with the artifact first entering a staging repository, followed by a manual promotion process.
 
 ```
 make release
 ```
 
-After a release to the staging repository, the [staging-to-release promotion process](http://central.sonatype.org/pages/releasing-the-deployment.html) must to be followed manually before the artefact is available in the central repository.
+After a release to the staging repository, the [staging-to-release promotion process](http://central.sonatype.org/pages/releasing-the-deployment.html) must be followed manually before the artifact is available in the central repository.
 
 ## Versioning
 
