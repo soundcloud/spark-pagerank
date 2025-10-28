@@ -1,4 +1,3 @@
-[![buildstatus](https://travis-ci.org/soundcloud/spark-pagerank.svg?branch=master)](https://travis-ci.org/soundcloud/spark-pagerank)
 
 # PageRank in Spark
 
@@ -19,7 +18,6 @@ This is an implementation of PageRank in Spark, using Spark's standard RDD API.
 ## Usage
 
 Include it as a dependency in your sbt project:
-`"com.soundcloud" %% "spark-pagerank" % <version>`
 
 ### As A Library
 
@@ -31,9 +29,6 @@ More examples of usage as a library can be found in the source of the built-in d
 
 We include several built-in drivers that operate on plain-text TSV input of labeled edges as a starting point. You will prepare the graph and run PageRank in the following sequence of drivers. Use `--help` to see the arguments and usage of each driver.
 
-1. `com.soundcloud.spark.pagerank.GraphBuilderApp`: Builds a PageRank graph from (non-normalized) weighted edges in TSV format (source, destination, weight), saving the resulting graph (edges and vertices) in Parquet files in preparation for next steps.
-1. `com.soundcloud.spark.pagerank.PageRankApp`: Runs PageRank on the graph produced using the functions in `PageRankGraph` or by using the `GraphBuilderApp`.
-1. `com.soundcloud.spark.pagerank.ConvergenceCheckApp`: Compares two PageRank vectors and lets the user determine if there is convergence by outputting the sum of the component-wise difference of the vectors. Note that this is an optional tool that is mostly used for debugging. If the user is concerned with iterating until convergence, the user can specify the convergence threshold at runtime to PageRank.
 
 ## Performance
 
@@ -81,7 +76,6 @@ This library aims to adhere to [Semantic Versioning 2.0.0](http://semver.org/spe
 
 ## Contributing
 
-We welcome contributions by [pull requests](https://github.com/soundcloud/spark-pagerank/pulls) and bug reports or feature requests as [issues](https://github.com/soundcloud/spark-pagerank/issues).
 
 ## Authors
 
@@ -93,6 +87,5 @@ We welcome contributions by [pull requests](https://github.com/soundcloud/spark-
 
 ## License
 
-Copyright (c) 2017 [SoundCloud Ltd.](http://soundcloud.com)
 
 See the [LICENSE](LICENSE) file for details.

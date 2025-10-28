@@ -1,4 +1,3 @@
-organization := "com.soundcloud"
 
 name := "spark-pagerank"
 
@@ -49,12 +48,9 @@ useGpg := true
 // metadata
 licenses += ("MIT", url("http://opensource.org/licenses/MIT"))
 
-homepage := Some(url("https://github.com/soundcloud/spark-pagerank"))
 
 scmInfo := Some(
   ScmInfo(
-    url("https://github.com/soundcloud/spark-pagerank"),
-    "scm:git@github.com:soundcloud/spark-pagerank.git"
   )
 )
 

@@ -1,4 +1,3 @@
-package com.soundcloud.spark.pagerank
 
 import org.apache.spark.sql.SparkSession
 

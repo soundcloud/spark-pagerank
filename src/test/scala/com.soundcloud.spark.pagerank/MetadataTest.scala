@@ -1,4 +1,3 @@
-package com.soundcloud.spark.pagerank
 
 import java.io.File
 

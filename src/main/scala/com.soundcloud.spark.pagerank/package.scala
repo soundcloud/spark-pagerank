@@ -1,4 +1,3 @@
-package com.soundcloud.spark
 
 import org.apache.spark.rdd.RDD
 
